@@ -223,7 +223,7 @@ contract ConsensusPool {
     address public distributor;
     address public stakingContract;
 
-    uint256 public constant REWARD_LIMIT = 3;
+    uint256 public constant REWARD_LIMIT = 9;
     uint256 public constant RATIO_DECAY = 797;   // in(1/10000)
     uint256 public constant RATIO_DECAY_T10 = 5642;
 
