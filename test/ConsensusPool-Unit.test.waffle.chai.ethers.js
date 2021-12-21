@@ -145,16 +145,16 @@ describe('ConsensusPool', () => {
 
         it('should multiple stake', async () => {
             let _deployerBalance = synassetsTotalSupply;
-            const _twentyPercent = _deployerBalance / BigInt(20);
+            const _fivePercent = _deployerBalance / BigInt(20);
             await synassets.approve(staking.address, synassetsTotalSupply.toString());
 
-            _deployerBalance = _deployerBalance - _twentyPercent;
+            _deployerBalance = _deployerBalance - _fivePercent;
 
-            let addr1CurrentPower = _twentyPercent;
-            await staking.stake(_twentyPercent.toString(), deployer.address);
+            let addr1CurrentPower = _fivePercent;
+            await staking.stake(_fivePercent.toString(), deployer.address);
             await staking.claimToken(deployer.address, addr1.address);
 
-            await synassets.transfer(addr2.address, _deployerBalance - _twentyPercent);
+            await synassets.transfer(addr2.address, _deployerBalance - _fivePercent);
 
             let addr3CurrentPower = 0n;
             await synassets.connect(addr2).approve(staking.address, synassetsTotalSupply.toString());
@@ -163,10 +163,10 @@ describe('ConsensusPool', () => {
                 await advanceBlockTo(firstEpochBlock);
                 firstEpochBlock = (BigInt(firstEpochBlock) + BigInt(epochLength)).toString();
 
-                await staking.connect(addr2).stake(_twentyPercent.toString(), addr2.address);
+                await staking.connect(addr2).stake(_fivePercent.toString(), addr2.address);
                 await staking.connect(addr2).claimToken(addr2.address, addr3.address);
                 if (index < 10) addr3CurrentPower = addr3CurrentPower * (10000n - 797n) / 10000n;
-                addr3CurrentPower += _twentyPercent;
+                addr3CurrentPower += _fivePercent;
 
                 await consensusPool.connect(addr1).claimReward();
                 addr1CurrentPower = addr1CurrentPower * (10000n - 797n) / 10000n;
