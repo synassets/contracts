@@ -13,6 +13,9 @@ describe('ConsensusPool', () => {
         addr1,
         addr2,
         addr3,
+        addr4,
+        addr5,
+        addr6,
         DAI,
         dai,
         SYNASSETS,
@@ -41,7 +44,7 @@ describe('ConsensusPool', () => {
         synassetsTotalSupply;
 
     beforeEach(async function () {
-        [deployer, addr1, addr2, addr3] = await ethers.getSigners();
+        [deployer, addr1, addr2, addr3, addr4, addr5, addr6] = await ethers.getSigners();
 
         DAI = await ethers.getContractFactory('DAI');
         dai = await DAI.deploy( 0 );
@@ -336,6 +339,119 @@ describe('ConsensusPool', () => {
 
             expect(inviteeInfo2.power).to.equal(0n);
             expect(Number(userInfo2.power)).to.lessThan(5000000000);
+        });
+    });
+
+    describe('multiple Stake', () => {
+        let
+            totalReward,
+            totalPower,
+            stakeAmount,
+            pairs;
+
+        beforeEach(async () => {
+            stakeAmount = synassetsTotalSupply / 2n;
+            pairs = [[addr1, addr2, stakeAmount / 2n], [addr3, addr4, stakeAmount / 4n], [addr5, addr6, stakeAmount / 4n]];
+            totalPower = totalReward = 0n;
+            for (let pairIndex = 0; pairIndex < pairs.length; pairIndex ++) {
+                await synassets.transfer(pairs[pairIndex][0].address, pairs[pairIndex][2].toString());
+                await synassets.connect(pairs[pairIndex][0]).approve(staking.address, pairs[pairIndex][2].toString());
+                await staking.connect(pairs[pairIndex][0]).stake(pairs[pairIndex][2].toString(), pairs[pairIndex][0].address);
+                await staking.connect(pairs[pairIndex][0]).claimToken(pairs[pairIndex][0].address, pairs[pairIndex][1].address);
+
+                const info = await consensusPool.getInfo(pairs[pairIndex][1].address);
+                expect(info.claimableAmount).to.be.equal(0n);
+                expect(info.totalReward).to.be.equal(0n);
+                expect(info.power).to.be.equal(pairs[pairIndex][2].toString());
+                expect(info.inviteNum).to.be.equal(1n);
+                expect(info.burnAmount).to.be.equal(0n);
+
+                totalPower += pairs[pairIndex][2];
+            }
+
+            expect(await consensusPool.totalPower()).to.be.equal(totalPower.toString());
+        });
+
+        it('should rebase without claim', async () => {
+            let distributeAmount = 0n;
+            let claimableAmounts = [0n, 0n, 0n], totalRewards = [0n, 0n, 0n], powers = [pairs[0][2], pairs[1][2], pairs[2][2]], inviteNums = [1n, 1n, 1n], burnAmount = [0n, 0n, 0n];
+            for (let index = 0; index < 21; index ++) {
+                await advanceBlockTo(firstEpochBlock);
+                firstEpochBlock = (BigInt(firstEpochBlock) + BigInt(epochLength)).toString();
+
+                // rebase only
+                await staking.stake('0', deployer.address);
+                await staking.claimToken(deployer.address, addr1.address);
+
+                synassetsTotalSupply += synassetsTotalSupply * BigInt(stakingRewardRate) / 1000000n;
+                const rewardNextDistribute = synassetsTotalSupply * BigInt(consensusRewardRate) / 1000000n;
+                totalReward += rewardNextDistribute;
+                synassetsTotalSupply += rewardNextDistribute;
+
+                if (index < 3) {
+                    claimableAmounts[0] = claimableAmounts[0] + (distributeAmount * ((10000n - 797n) ** BigInt(index))) * pairs[0][2] / stakeAmount  / (10000n ** BigInt(index));
+                    claimableAmounts[1] = claimableAmounts[1] + (distributeAmount * ((10000n - 797n) ** BigInt(index))) * pairs[1][2] / stakeAmount  / (10000n ** BigInt(index));
+                    claimableAmounts[2] = claimableAmounts[2] + (distributeAmount * ((10000n - 797n) ** BigInt(index))) * pairs[2][2] / stakeAmount  / (10000n ** BigInt(index));
+                    totalRewards[0] = claimableAmounts[0]; totalRewards[1] = claimableAmounts[1]; totalRewards[2] = claimableAmounts[2];
+                    powers[0] = powers[0] * (10000n - 797n) / 10000n; powers[1] = powers[1] * (10000n - 797n) / 10000n; powers[2] = powers[2] * (10000n - 797n) / 10000n;
+                }
+                distributeAmount = rewardNextDistribute;
+
+                for (let pairIndex = 0; pairIndex < pairs.length; pairIndex ++) {
+                    const info = await consensusPool.getInfo(pairs[pairIndex][1].address);
+
+                    expect(info.claimableAmount).to.be.equal(claimableAmounts[pairIndex]);
+                    expect(info.totalReward).to.be.equal(totalRewards[pairIndex]);
+                    expect(info.power).to.be.equal(powers[pairIndex]);
+                    expect(info.inviteNum).to.be.equal(inviteNums[pairIndex]);
+                    expect(info.burnAmount).to.be.equal(burnAmount[pairIndex]);
+                }
+            }
+        });
+
+        it('should rebase with claim', async () => {
+            let distributeAmount = 0n;
+            let claimableAmounts = [0n, 0n, 0n], claimedAmount = [0n, 0n, 0n], totalRewards = [0n, 0n, 0n], powers = [pairs[0][2], pairs[1][2], pairs[2][2]], inviteNums = [1n, 1n, 1n], burnAmount = [0n, 0n, 0n];
+            for (let index = 0; index < 21; index ++) {
+                await advanceBlockTo(firstEpochBlock);
+                firstEpochBlock = (BigInt(firstEpochBlock) + BigInt(epochLength)).toString();
+
+                // rebase only
+                await staking.stake('0', deployer.address);
+                await staking.claimToken(deployer.address, addr1.address);
+
+                synassetsTotalSupply += synassetsTotalSupply * BigInt(stakingRewardRate) / 1000000n;
+                const rewardNextDistribute = synassetsTotalSupply * BigInt(consensusRewardRate) / 1000000n;
+                totalReward += rewardNextDistribute;
+                synassetsTotalSupply += rewardNextDistribute;
+
+                for (let pairIndex = 0; pairIndex < pairs.length; pairIndex ++) {
+                    await consensusPool.connect(pairs[pairIndex][1]).claimReward();
+
+                    powers[pairIndex] = powers[pairIndex] * (10000n - 797n) / 10000n;
+                    claimedAmount[pairIndex] += distributeAmount * pairs[pairIndex][2] / stakeAmount;
+                    totalRewards[pairIndex] = claimedAmount[pairIndex];
+
+                    const info = await consensusPool.getInfo(pairs[pairIndex][1].address);
+
+                    expect(info.claimableAmount).to.be.equal(claimableAmounts[pairIndex]);
+
+                    let diff = BigInt(info.totalReward) - totalRewards[pairIndex];
+                    diff = diff > 0 ? diff : -diff;
+                    if (diff !== 0n) expect(Number(diff.toString())).to.lessThan(Number((totalRewards[pairIndex] / 10n).toString()));
+
+                    expect(info.power).to.be.equal(powers[pairIndex]);
+                    expect(info.inviteNum).to.be.equal(inviteNums[pairIndex]);
+                    expect(info.burnAmount).to.be.equal(burnAmount[pairIndex]);
+
+                    const balance = await synassets.balanceOf(pairs[pairIndex][1].address);
+                    let diff1 = BigInt(balance) - claimedAmount[pairIndex];
+                    diff1 = diff1 > 0 ? diff1 : -diff1;
+                    if (diff1 !== 0n) expect(Number(diff1.toString())).to.lessThan(Number((claimedAmount[pairIndex] / 10n).toString()));
+                }
+
+                distributeAmount = rewardNextDistribute;
+            }
         });
     });
 });
