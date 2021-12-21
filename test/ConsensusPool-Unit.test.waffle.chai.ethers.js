@@ -43,6 +43,16 @@ describe('ConsensusPool', () => {
     let
         synassetsTotalSupply;
 
+    function approximately(num1,num2,precision) {
+        num1 = BigInt(num1);
+        num2 = BigInt(num2);
+
+        let diff = num1 - num2;
+        diff = diff > 0n ? diff : -diff;
+
+        return diff === 0n ? true : diff < num1 / precision;
+    }
+
     beforeEach(async function () {
         [deployer, addr1, addr2, addr3, addr4, addr5, addr6] = await ethers.getSigners();
 
@@ -328,9 +338,7 @@ describe('ConsensusPool', () => {
             const inviteeInfo1 = await consensusPool.inviteeInfos(addr1.address, deployer.address);
             const userInfo1 = await consensusPool.userInfos(addr1.address);
 
-            let diff1 = BigInt(userInfo1.power) - BigInt(inviteeInfo1.power);
-            diff1 = diff1 > 0 ? diff1 : -diff1;
-            expect(Number(diff1.toString())).to.lessThan(Number((BigInt(userInfo1.power) / 100n).toString()));
+            expect(approximately(userInfo1.power, inviteeInfo1.power, 10000n)).to.equal(true);
 
             const sSYNASSETSBalance1 = BigInt(await ssynassets.balanceOf(deployer.address));
             await staking.unstake(sSYNASSETSBalance1.toString(), false);
@@ -370,6 +378,28 @@ describe('ConsensusPool', () => {
             }
 
             expect(await consensusPool.totalPower()).to.be.equal(totalPower.toString());
+        });
+
+        afterEach(async () => {
+            const info0 = await consensusPool.getInfo(pairs[0][1].address);
+            const info1 = await consensusPool.getInfo(pairs[1][1].address);
+            const info2 = await consensusPool.getInfo(pairs[2][1].address);
+
+            const balance0 = await synassets.balanceOf(pairs[0][1].address);
+            const balance1 = await synassets.balanceOf(pairs[1][1].address);
+            const balance2 = await synassets.balanceOf(pairs[2][1].address);
+
+            expect(info1.claimableAmount).to.be.equal(info2.claimableAmount);
+            expect(info1.power).to.be.equal(info2.power);
+            expect(info1.totalReward).to.be.equal(info2.totalReward);
+
+            expect(info1.claimableAmount).to.be.equal(BigInt(info0.claimableAmount) / 2n);
+
+            expect(approximately(info0.totalReward, BigInt(info1.totalReward) * 2n, 10000000n)).to.be.equal(true);
+            expect(approximately(info0.power, BigInt(info1.power) * 2n, 10000000n)).to.be.equal(true);
+
+            expect(balance1).to.be.equal(balance2);
+            expect(approximately(balance0, BigInt(balance1) * 2n, 1000000000n)).to.be.equal(true);
         });
 
         it('should rebase without claim', async () => {
@@ -435,19 +465,14 @@ describe('ConsensusPool', () => {
                     const info = await consensusPool.getInfo(pairs[pairIndex][1].address);
 
                     expect(info.claimableAmount).to.be.equal(claimableAmounts[pairIndex]);
-
-                    let diff = BigInt(info.totalReward) - totalRewards[pairIndex];
-                    diff = diff > 0 ? diff : -diff;
-                    if (diff !== 0n) expect(Number(diff.toString())).to.lessThan(Number((totalRewards[pairIndex] / 10n).toString()));
+                    expect(approximately(info.totalReward, totalRewards[pairIndex], 10000000n)).to.equal(true);
 
                     expect(info.power).to.be.equal(powers[pairIndex]);
                     expect(info.inviteNum).to.be.equal(inviteNums[pairIndex]);
                     expect(info.burnAmount).to.be.equal(burnAmount[pairIndex]);
 
                     const balance = await synassets.balanceOf(pairs[pairIndex][1].address);
-                    let diff1 = BigInt(balance) - claimedAmount[pairIndex];
-                    diff1 = diff1 > 0 ? diff1 : -diff1;
-                    if (diff1 !== 0n) expect(Number(diff1.toString())).to.lessThan(Number((claimedAmount[pairIndex] / 10n).toString()));
+                    expect(approximately(balance, claimedAmount[pairIndex], 10000000n)).to.equal(true);
                 }
 
                 distributeAmount = rewardNextDistribute;
