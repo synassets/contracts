@@ -98,6 +98,16 @@ const duration = {
   },
 };
 
+function approximately(num1,num2,precision) {
+  num1 = BigInt(num1);
+  num2 = BigInt(num2);
+
+  let diff = num1 - num2;
+  diff = diff > 0n ? diff : -diff;
+
+  return diff === 0n ? true : diff < num1 / precision;
+}
+
 module.exports = {
   advanceBlock,
   advanceBlockTo,
@@ -106,4 +116,5 @@ module.exports = {
   increase,
   increaseTo,
   duration,
+  approximately,
 };

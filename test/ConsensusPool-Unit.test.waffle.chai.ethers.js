@@ -1,7 +1,7 @@
 const { ethers } = require("hardhat");
 const { solidity } = require("ethereum-waffle");
 const { expect } = require("chai");
-const { advanceBlockTo, latestBlock } = require("./utils");
+const { advanceBlockTo, latestBlock, approximately } = require("./utils");
 
 // @ts-ignore
 
@@ -42,16 +42,6 @@ describe('ConsensusPool', () => {
 
     let
         synassetsTotalSupply;
-
-    function approximately(num1,num2,precision) {
-        num1 = BigInt(num1);
-        num2 = BigInt(num2);
-
-        let diff = num1 - num2;
-        diff = diff > 0n ? diff : -diff;
-
-        return diff === 0n ? true : diff < num1 / precision;
-    }
 
     beforeEach(async function () {
         [deployer, addr1, addr2, addr3, addr4, addr5, addr6] = await ethers.getSigners();
@@ -108,7 +98,7 @@ describe('ConsensusPool', () => {
     });
 
     describe('initialize()', () => {
-        it('should initialize twice', function () {
+        it('should initialize twice', async () => {
             expect(consensusPool.initialize(synassets.address, ssynassets.address, epochLength, firstEpochNumber, firstEpochBlock, staking.address, distributor.address)).to.be.revertedWith('AI');
         });
     });
