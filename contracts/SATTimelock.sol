@@ -493,17 +493,16 @@ contract SATTimelock {
         uint256 unlocked_ = unlocked();
         require(unlocked_ > 0, 'C0');
 
-        benefitUnlocked = 0;
-        benefitClaimed = benefitClaimed.add(unlocked_);
+        benefitClaimed = benefitClaimed.add(unlocked_).sub(benefitUnlocked);
         benefitClaimedTotal = benefitClaimedTotal.add(unlocked_);
+        benefitUnlocked = 0;
         IERC20(token).safeTransfer(beneficiary, unlocked_);
     }
 
     function increaseBenefit(uint256 amount_) external {
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount_);
 
-        uint256 unlocked_ = unlocked();
-        if (unlocked_ > 0) benefitUnlocked = unlocked_;
+        benefitUnlocked = unlocked();
 
         uint256 timeLeft_ = 0;
         uint256 benefitLeft_ = 0;
@@ -516,5 +515,6 @@ contract SATTimelock {
         timeUnlockBegin = block.timestamp;
         timeUnlockEnd = block.timestamp.add(timeLeft_);
         benefit = benefitLeft_.add(amount_);
+        benefitClaimed = 0;
     }
 }

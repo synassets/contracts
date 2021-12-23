@@ -64,7 +64,6 @@ describe('SAT', () => {
             await expect(sat.transfer(addr2.address, AMOUNT)).to.be.revertedWith('ERC20Pausable: token transfer while paused');
 
             await sat.addWhitelist(deployer.address);
-            await sat.addReserveCapacity([addr2.address], AMOUNT);
             await sat.transfer(addr2.address, AMOUNT);
 
             expect(await sat.balanceOf(deployer.address)).to.equal(0n);
@@ -81,33 +80,6 @@ describe('SAT', () => {
 
             expect(await sat.balanceOf(deployer.address)).to.equal(0n);
             expect(await sat.balanceOf(addr2.address)).to.equal(BigInt(AMOUNT));
-        });
-    });
-
-    describe('addReserveCapacity()', () => {
-        beforeEach(async function () {
-            await sat.mint(deployer.address, AMOUNT);
-            await sat.mint(addr1.address, AMOUNT);
-            await sat.pauseTransfer();
-            await sat.addWhitelist(deployer.address);
-            await sat.addWhitelist(addr1.address);
-        });
-
-        it('should allow users to receive token', async () => {
-            await expect(sat.transfer(addr2.address, AMOUNT)).to.be.revertedWith('capacity exceeded');
-
-            await sat.addReserveCapacity([addr2.address], AMOUNT);
-            await sat.transfer(addr2.address, AMOUNT);
-            expect(await sat.balanceOf(deployer.address)).to.equal(0n);
-            expect(await sat.balanceOf(addr2.address)).to.equal(BigInt(AMOUNT));
-
-            await expect(sat.connect(addr1).transfer(addr2.address, AMOUNT)).to.be.revertedWith('capacity exceeded');
-
-            await sat.addReserveCapacity([sat.address], AMOUNT);
-
-            await sat.connect(addr1).transfer(addr2.address, AMOUNT);
-            expect(await sat.balanceOf(addr1.address)).to.equal(0n);
-            expect(await sat.balanceOf(addr2.address)).to.equal(BigInt(AMOUNT) * 2n);
         });
     });
 

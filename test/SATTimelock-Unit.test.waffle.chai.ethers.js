@@ -48,20 +48,32 @@ describe('SATTimelock', () => {
         });
 
         it('should claimBenefit', async () => {
+            const feePerMint = BigInt(AMOUNT) / RATIO_FEE;
             await sat.mint(addr1.address, AMOUNT);
             await sat.mint(addr1.address, AMOUNT);
 
             await increase(DURATION / 2);
 
             await satTimelock.connect(addr6).claimBenefit();
-            expect(approximately(await sat.balanceOf(addr6.address), BigInt(AMOUNT) / RATIO_FEE, 100000n)).to.equal(true);
+            expect(approximately(await sat.balanceOf(addr6.address), feePerMint, 100000n)).to.equal(true);
 
             await increase(DURATION / 2);
             await satTimelock.connect(addr6).claimBenefit();
-            expect(approximately(await sat.balanceOf(addr6.address), BigInt(AMOUNT) / RATIO_FEE * 2n, 100000n)).to.equal(true);
+            expect(approximately(await sat.balanceOf(addr6.address), feePerMint * 2n, 100000n)).to.equal(true);
 
             await increase(DURATION);
             await expect(satTimelock.connect(addr6).claimBenefit()).to.be.revertedWith('C0');
+
+            await sat.mint(addr1.address, AMOUNT);
+            await increase(DURATION / 2);
+
+            await satTimelock.connect(addr6).claimBenefit();
+            expect(approximately(await sat.balanceOf(addr6.address), feePerMint * 2n + feePerMint / 2n, 100000n)).to.equal(true);
+
+            await increase(DURATION / 2);
+
+            await satTimelock.connect(addr6).claimBenefit();
+            expect(approximately(await sat.balanceOf(addr6.address), feePerMint * 3n, 100000n)).to.equal(true);
         });
     });
 });

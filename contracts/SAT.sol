@@ -509,9 +509,6 @@ contract SATERC20Token is ERC20Permit, VaultOwned, Pausable {
 
     address public feeAddress;
     mapping(address => bool) public isTransferWhitelist;
-    mapping(address => uint256) private _reserveCapacity;
-
-    event AddCapacity(address indexed account, uint256 amount);
 
     constructor() ERC20("Synassets Token", "SAT", 18) {
     }
@@ -552,10 +549,7 @@ contract SATERC20Token is ERC20Permit, VaultOwned, Pausable {
     ) internal virtual override {
         super._beforeTokenTransfer(from, to, amount);
 
-        if (paused()) {
-            require(isTransferWhitelist[from], "ERC20Pausable: token transfer while paused");
-            require(balanceOf(to).add(amount) <= getReserveCapacity(to), "capacity exceeded");
-        }
+        require(!paused() || isTransferWhitelist[from], "ERC20Pausable: token transfer while paused");
     }
 
     function addWhitelist(address account_) external onlyOwner {
@@ -564,17 +558,6 @@ contract SATERC20Token is ERC20Permit, VaultOwned, Pausable {
 
     function removeWhitelist(address account_) external onlyOwner {
         delete isTransferWhitelist[account_];
-    }
-
-    function addReserveCapacity(address[] calldata accounts_, uint256 amount_) external onlyOwner {
-        for (uint256 index = 0; index < accounts_.length; index ++) {
-            _reserveCapacity[accounts_[index]] = amount_;
-            emit AddCapacity(accounts_[index], amount_);
-        }
-    }
-
-    function getReserveCapacity(address account) public view returns (uint256) {
-        return _reserveCapacity[account].add(_reserveCapacity[address(this)]);
     }
 
     function unpauseTransfer() external onlyOwner {
