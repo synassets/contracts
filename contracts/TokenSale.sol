@@ -522,9 +522,22 @@ contract TokenSale is Ownable {
 
     address payable beneficiary;
 
+    bool private _inSwapping;
+
     /* ====== Event ====== */
 
     event Swapped(address indexed sender, address indexed inviter, uint256 amount0, uint256 amount1);
+
+    /* ====== Modifier ====== */
+    modifier nonReentrant {
+        require(!_inSwapping);
+
+        _inSwapping = true;
+
+        _;
+
+        _inSwapping = false;
+    }
 
     constructor (
         uint256 k_,
@@ -580,7 +593,7 @@ contract TokenSale is Ownable {
 
     /* ====== PUBLIC FUNCTIONS ====== */
 
-    function swap(uint256 amount1_, address inviter_) external payable {
+    function swap(uint256 amount1_, address inviter_) external payable nonReentrant {
         address payable sender = msg.sender;
         require(whitelist[inviter_], 'invalid inviter');
         require(tx.origin == sender, 'disallow contract caller');
