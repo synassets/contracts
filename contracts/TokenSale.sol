@@ -510,6 +510,7 @@ contract TokenSale is Ownable {
     uint256 public maxAmount1;
     // maximum swap amount1 per wallet
     uint256 public maxAmount1PerWallet;
+    uint256 public minAmount1PerWallet;
 
     mapping(address => bool) public whitelist;
     mapping(address => uint256) public amountSwapped0;
@@ -517,10 +518,14 @@ contract TokenSale is Ownable {
 
     uint256 public ratioInviterReward;
     uint256 public ratioInviteeReward;
+    uint256 public amountInviterRewardTotal0;
+    uint256 public amountInviteeRewardTotal0;
     mapping(address => uint256) public amountInviterReward0;
     mapping(address => uint256) public amountInviteeReward0;
+    mapping(address => uint256) public numberOfInvitee;
+    mapping(address => address) public inviters;
 
-    address payable beneficiary;
+    address payable public beneficiary;
 
     bool private _inSwapping;
 
@@ -551,6 +556,7 @@ contract TokenSale is Ownable {
         bool enableWhiteList_,
         uint256 maxAmount1_,
         uint256 maxAmount1PerWallet_,
+        uint256 minAmount1PerWallet_,
         address payable beneficiary_,
         uint256 ratioInviterReward_,
         uint256 ratioInviteeReward_
@@ -566,7 +572,7 @@ contract TokenSale is Ownable {
         require(token0_ != address(0), 'IA');
         token0 = token0_;
 
-        require(token1_ != address(0), 'IA');
+//      require(token1_ != address(0), 'IA');
         token1 = token1_;
 
         openAt = openAt_;
@@ -574,6 +580,7 @@ contract TokenSale is Ownable {
         enableWhiteList = enableWhiteList_;
         maxAmount1 = maxAmount1_;
         maxAmount1PerWallet = maxAmount1PerWallet_;
+        minAmount1PerWallet = minAmount1PerWallet_;
         beneficiary = beneficiary_;
         ratioInviterReward = ratioInviterReward_;
         ratioInviteeReward = ratioInviteeReward_;
@@ -595,12 +602,20 @@ contract TokenSale is Ownable {
 
     function swap(uint256 amount1_, address inviter_) external payable nonReentrant {
         address payable sender = msg.sender;
-        require(whitelist[inviter_], 'invalid inviter');
+
+        if (inviters[sender] == address(0)) {
+            numberOfInvitee[inviter_] ++;
+            inviters[sender] = inviter_;
+        }
+        inviter_ = inviters[sender];
+
+        require(whitelist[inviter_] && sender != inviter_, 'invalid inviter');
         require(tx.origin == sender, 'disallow contract caller');
         if (enableWhiteList) require(whitelist[sender], 'sender not on whitelist');
 
         require(openAt <= block.timestamp, 'not open yet');
         require(closeAt > block.timestamp, 'closed already');
+        require(minAmount1PerWallet <= amount1_, 'too few');
         require(
             maxAmount1 >= amountTotal1.add(amount1_) &&
             maxAmount1PerWallet >= amountSwapped1[sender].add(amount1_),
@@ -609,6 +624,12 @@ contract TokenSale is Ownable {
 
         uint256 amount0_ = calcT1(amount1_);
         require(amount0_ < amount1_.mul(bDenominator).div(b), 'wrong price');
+
+        // do transfer
+        if (token1 == address(0)) require(msg.value == amount1_, 'invalid amount of ETH');
+        else IERC20(token1).safeTransferFrom(sender, address(this), amount1_);
+        IERC20Mintable(token0).mint(sender, amount0_);
+
         // update storage
         t0 = t0.add(amount0_);
         amountTotal0 = amountTotal0.add(amount0_);
@@ -616,25 +637,20 @@ contract TokenSale is Ownable {
         amountSwapped0[sender] = amountSwapped0[sender].add(amount0_);
         amountSwapped1[sender] = amountSwapped1[sender].add(amount1_);
 
-        // do transfer
-        if (token1 == address(0)) require(msg.value == amount1_, 'invalid amount of ETH');
-        else IERC20(token1).safeTransferFrom(sender, address(this), amount1_);
-        IERC20Mintable(token0).mint(sender, amount0_);
-
         // send token1 to beneficiary
         if (token1 == address(0)) beneficiary.transfer(amount1_);
         else IERC20(token1).safeTransfer(beneficiary, amount1_);
 
-        if (whitelist[inviter_]) {
-            uint256 inviteeReward_ = amount0_.mul(ratioInviteeReward).div(1 ether);
-            uint256 inviterReward_ = amount0_.mul(ratioInviterReward).div(1 ether);
-            // update storage
-            amountInviteeReward0[sender] = amountInviteeReward0[sender].add(inviteeReward_);
-            amountInviterReward0[inviter_] = amountInviterReward0[inviter_].add(inviterReward_);
+        uint256 inviteeReward_ = amount0_.mul(ratioInviteeReward).div(1 ether);
+        uint256 inviterReward_ = amount0_.mul(ratioInviterReward).div(1 ether);
+        // update storage
+        amountInviteeReward0[sender] = amountInviteeReward0[sender].add(inviteeReward_);
+        amountInviterReward0[inviter_] = amountInviterReward0[inviter_].add(inviterReward_);
+        amountInviteeRewardTotal0 = amountInviteeRewardTotal0.add(inviteeReward_);
+        amountInviterRewardTotal0 = amountInviterRewardTotal0.add(inviterReward_);
 
-            IERC20Mintable(token0).mint(sender, inviteeReward_);
-            IERC20Mintable(token0).mint(inviter_, inviterReward_);
-        }
+        IERC20Mintable(token0).mint(sender, inviteeReward_);
+        IERC20Mintable(token0).mint(inviter_, inviterReward_);
 
         emit Swapped(sender, inviter_, amount0_, amount1_);
     }
