@@ -24,6 +24,7 @@ describe('TokenSale', () => {
 
         maxAmount1 = '600000000000000000000',
         maxAmount1PerWallet = '100000000000000000000',
+        minAmount1PerWallet = '10000000000000000000';
         ratioInviterReward = '40000000000000000',
         ratioInviteeReward = '10000000000000000',
         initialMint = '10000000000000000000000000';
@@ -52,6 +53,7 @@ describe('TokenSale', () => {
             true,                                               // enableWhiteList_
             maxAmount1,                                         // maxAmount1_
             maxAmount1PerWallet,                                // maxAmount1PerWallet_
+            minAmount1PerWallet,                                // minAmount1PerWallet_
             addr7.address,                                      // beneficiary_
             ratioInviterReward,                                 // ratioInviterReward_
             ratioInviteeReward                                  // ratioInviteeReward_
