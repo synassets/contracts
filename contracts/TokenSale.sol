@@ -662,11 +662,11 @@ contract TokenSale is Ownable {
 
         uint256 a_ = k;
         uint256 b_ = uint256(2).mul(b);
-        uint256 n_c_ = uint256(2).mul(amount_).add(a_.mul(t0_).div(kDenominator).mul(t0_)).add(b_.mul(t0_).div(bDenominator));
+        uint256 n_c_ = uint256(2).mul(amount_).add(a_.mul(t0_).mul(t0_).div(kDenominator)).add(b_.mul(t0_).div(bDenominator));
 
         uint256 b2_add_4ac = b_.mul(kDenominator).div(bDenominator).mul(b_).div(bDenominator).add(uint256(4).mul(a_).mul(n_c_)).mul(kDenominator);
 
-        return b2_add_4ac.sqrrt().sub(b_.mul(kDenominator).div(bDenominator)).div(uint256(2).mul(a_)).sub(t0);
+        return b2_add_4ac.sqrrt().sub(b_.mul(kDenominator).div(bDenominator)).div(uint256(2).mul(a_)).sub(t0_);
     }
 
 }
