@@ -24,7 +24,7 @@ describe('TokenSale', () => {
 
         maxAmount1 = '600000000000000000000',
         maxAmount1PerWallet = '100000000000000000000',
-        minAmount1PerWallet = '10000000000000000000';
+        minAmount1PerWallet = '10000000000000000000',
         ratioInviterReward = '40000000000000000',
         ratioInviteeReward = '10000000000000000',
         initialMint = '10000000000000000000000000';
@@ -61,6 +61,7 @@ describe('TokenSale', () => {
 
         await sat.setVault(tokenSale.address);
         await dai.mint(deployer.address, initialMint);
+        await tokenSale.addInviteable([deployer.address, addr1.address, addr2.address, addr3.address, addr4.address, addr5.address, addr6.address, addr7.address]);
         await tokenSale.addWhitelist([deployer.address, addr1.address, addr2.address, addr3.address, addr4.address, addr5.address, addr6.address, addr7.address]);
     });
 

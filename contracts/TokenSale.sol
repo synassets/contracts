@@ -513,6 +513,7 @@ contract TokenSale is Ownable {
     uint256 public minAmount1PerWallet;
 
     mapping(address => bool) public whitelist;
+    mapping(address => bool) public inviteable;
     mapping(address => uint256) public amountSwapped0;
     mapping(address => uint256) public amountSwapped1;
 
@@ -587,7 +588,6 @@ contract TokenSale is Ownable {
     }
 
     /* ====== Owner FUNCTIONS ====== */
-
     function addWhitelist(address[] calldata whitelist_) external onlyOwner {
         for (uint256 index = 0; index < whitelist_.length; index ++)
             whitelist[whitelist_[index]] = true;
@@ -596,6 +596,16 @@ contract TokenSale is Ownable {
     function removeWhitelist(address[] calldata whitelist_) external onlyOwner {
         for (uint256 index = 0; index < whitelist_.length; index ++)
             whitelist[whitelist_[index]] = false;
+    }
+
+    function addInviteable(address[] calldata inviteable_) external onlyOwner {
+        for (uint256 index = 0; index < inviteable_.length; index ++)
+            inviteable[inviteable_[index]] = true;
+    }
+
+    function removeInviteable(address[] calldata inviteable_) external onlyOwner {
+        for (uint256 index = 0; index < inviteable_.length; index ++)
+            inviteable[inviteable_[index]] = false;
     }
 
     /* ====== PUBLIC FUNCTIONS ====== */
@@ -609,7 +619,7 @@ contract TokenSale is Ownable {
         }
         inviter_ = inviters[sender];
 
-        require(whitelist[inviter_] && sender != inviter_, 'invalid inviter');
+        require(inviteable[inviter_] && sender != inviter_, 'invalid inviter');
         require(tx.origin == sender, 'disallow contract caller');
         if (enableWhiteList) require(whitelist[sender], 'sender not on whitelist');
 
