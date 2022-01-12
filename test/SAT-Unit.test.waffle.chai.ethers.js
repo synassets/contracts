@@ -27,7 +27,7 @@ describe('SAT', () => {
 
         sat = await PROXY.connect(proxyDeployer).deploy(proxyDeployer.address, (await SAT.deploy()).address, '0x');
         sat = await SAT.attach(sat.address);
-        sat.__SATERC20Token_initialize();
+        await sat.__SATERC20Token_initialize();
         await sat.setVault(deployer.address);
     });
 

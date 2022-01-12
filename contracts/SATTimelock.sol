@@ -1,6 +1,112 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
+/**
+ * @title Initializable
+ *
+ * @dev Helper contract to support initializer functions. To use it, replace
+ * the constructor with a function that has the `initializer` modifier.
+ * WARNING: Unlike constructors, initializer functions must be manually
+ * invoked. This applies both to deploying an Initializable contract, as well
+ * as extending an Initializable contract via inheritance.
+ * WARNING: When used with inheritance, manual care must be taken to not invoke
+ * a parent initializer twice, or ensure that all initializers are idempotent,
+ * because this is not dealt with automatically as with constructors.
+ */
+contract Initializable {
+
+    /**
+     * @dev Indicates that the contract has been initialized.
+   */
+    bool private initialized;
+
+    /**
+     * @dev Indicates that the contract is in the process of being initialized.
+   */
+    bool private initializing;
+
+    /**
+     * @dev Modifier to use in the initializer function of a contract.
+   */
+    modifier initializer() {
+        require(initializing || isConstructor() || !initialized, "Contract instance has already been initialized");
+
+        bool isTopLevelCall = !initializing;
+        if (isTopLevelCall) {
+            initializing = true;
+            initialized = true;
+        }
+
+        _;
+
+        if (isTopLevelCall) {
+            initializing = false;
+        }
+    }
+
+    /// @dev Returns true if and only if the function is running in the constructor
+    function isConstructor() private view returns (bool) {
+        // extcodesize checks the size of the code stored in an address, and
+        // address returns the current address. Since the code is still not
+        // deployed when running a constructor, any checks on its code size will
+        // yield zero, making it an effective way to detect if a contract is
+        // under construction or not.
+        address self = address(this);
+        uint256 cs;
+        assembly { cs := extcodesize(self) }
+        return cs == 0;
+    }
+}
+
+interface IOwnable {
+    function owner() external view returns (address);
+
+    function renounceOwnership() external;
+
+    function transferOwnership( address newOwner_ ) external;
+}
+
+contract Ownable is IOwnable, Initializable {
+
+    address internal _owner;
+    address internal _pendingOwner;
+
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    event OwnershipTransferring(address indexed owner, address indexed pendingOwner);
+
+    function __Ownable_init_unchain() internal initializer {
+        require(_owner == address(0));
+        _owner = msg.sender;
+        emit OwnershipTransferred( address(0), _owner );
+    }
+
+    function owner() public view override returns (address) {
+        return _owner;
+    }
+
+    modifier onlyOwner() {
+        require( _owner == msg.sender, "Ownable: caller is not the owner" );
+        _;
+    }
+
+    function renounceOwnership() public virtual override onlyOwner() {
+        emit OwnershipTransferred( _owner, address(0) );
+        _owner = address(0);
+    }
+
+    function transferOwnership( address newOwner_ ) public virtual override onlyOwner() {
+        require( newOwner_ != address(0), "Ownable: new owner is the zero address");
+        emit OwnershipTransferring( _owner, newOwner_ );
+        _pendingOwner = newOwner_;
+    }
+
+    function acceptOwnership() external {
+        require(_pendingOwner == msg.sender, "Permission denied");
+        emit OwnershipTransferred( _owner, msg.sender );
+        _owner = msg.sender;
+    }
+}
+
 interface IERC20 {
     /**
      * @dev Returns the amount of tokens in existence.
@@ -448,14 +554,16 @@ library Math {
     }
 }
 
-contract SATTimelock {
+contract SATTimelock is Ownable {
 
     using LowGasSafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    address public immutable token;
-    address public immutable beneficiary;
-    uint256 public immutable duration;
+    address public token;
+    address public beneficiary;
+    uint256 public duration;
+
+    address internal _beneficiaryPending;
 
     uint256 public benefit;
     uint256 public benefitClaimed;
@@ -464,11 +572,20 @@ contract SATTimelock {
     uint256 public timeUnlockBegin;
     uint256 public timeUnlockEnd;
 
-    constructor(
+    function __SATTimelock_initialize(
         address token_,
         address beneficiary_,
         uint256 duration_
-    ) {
+    ) external initializer {
+        __Ownable_init_unchain();
+        __SATTimelock_init_unchain(token_, beneficiary_, duration_);
+    }
+
+    function __SATTimelock_init_unchain(
+        address token_,
+        address beneficiary_,
+        uint256 duration_
+    ) internal initializer {
         require(token_ != address(0), 'IA');
         token = token_;
 
@@ -516,5 +633,14 @@ contract SATTimelock {
         timeUnlockEnd = block.timestamp.add(timeLeft_);
         benefit = benefitLeft_.add(amount_);
         benefitClaimed = 0;
+    }
+
+    function setBeneficiaryPending(address beneficiary_) external onlyOwner {
+        _beneficiaryPending = beneficiary_;
+    }
+
+    function acceptBeneficiary() external {
+        require(_beneficiaryPending == msg.sender, "Permission denied");
+        beneficiary = msg.sender;
     }
 }

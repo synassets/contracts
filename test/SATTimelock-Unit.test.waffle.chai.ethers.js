@@ -13,6 +13,7 @@ describe('SATTimelock', () => {
         addr4,
         addr5,
         addr6,
+        proxyDeployer,
         SAT,
         sat,
         SATTimelock,
@@ -24,14 +25,20 @@ describe('SATTimelock', () => {
         RATIO_FEE = 10n;
 
     beforeEach(async function () {
-        [deployer, addr1, addr2, addr3, addr4, addr5, addr6] = await ethers.getSigners();
+        [deployer, addr1, addr2, addr3, addr4, addr5, addr6, proxyDeployer] = await ethers.getSigners();
 
         SAT = await ethers.getContractFactory('SATERC20Token');
-        sat = await SAT.deploy();
+        const PROXY = await ethers.getContractFactory('AdminUpgradeabilityProxy');
+
+        sat = await PROXY.connect(proxyDeployer).deploy(proxyDeployer.address, (await SAT.deploy()).address, '0x');
+        sat = await SAT.attach(sat.address);
+        await sat.__SATERC20Token_initialize();
         await sat.setVault(deployer.address);
 
         SATTimelock = await ethers.getContractFactory('SATTimelock');
-        satTimelock = await SATTimelock.deploy(sat.address, addr6.address, DURATION.toString());
+        satTimelock = await PROXY.connect(proxyDeployer).deploy(proxyDeployer.address, (await SATTimelock.deploy()).address, '0x');
+        satTimelock = await SATTimelock.attach(satTimelock.address);
+        await satTimelock.__SATTimelock_initialize(sat.address, addr6.address, DURATION.toString());
 
         await sat.setFeeAddress(satTimelock.address);
     });
