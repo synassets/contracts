@@ -206,14 +206,14 @@ contract BaseAdminUpgradeabilityProxy is BaseUpgradeabilityProxy {
     /**
      * @return The address of the proxy admin.
    */
-    function admin() external ifAdmin returns (address) {
+    function admin() external returns (address) {
         return _admin();
     }
 
     /**
      * @return The address of the implementation.
    */
-    function implementation() external ifAdmin returns (address) {
+    function implementation() external returns (address) {
         return _implementation();
     }
 
@@ -326,7 +326,7 @@ abstract contract UpgradeabilityProxy is BaseUpgradeabilityProxy {
 
 /**
  * @title AdminUpgradeabilityProxy
- * @dev Extends from BaseAdminUpgradeabilityProxy with a constructor for 
+ * @dev Extends from BaseAdminUpgradeabilityProxy with a constructor for
  * initializing the implementation, admin, and init data.
  */
 contract AdminUpgradeabilityProxy is BaseAdminUpgradeabilityProxy, UpgradeabilityProxy {

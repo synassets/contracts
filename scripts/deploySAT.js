@@ -9,7 +9,9 @@ async function main() {
     const PROXY = await ethers.getContractFactory('AdminUpgradeabilityProxy');
 
     const logic = await SAT.connect(proxyOwner).deploy();
-    const proxy = await PROXY.connect(proxyOwner).deploy(proxyOwner.address, logic.address, '0x');
+    await logic.deployed();
+    let proxy = await PROXY.connect(proxyOwner).deploy(proxyOwner.address, logic.address, '0x');
+    proxy = await SAT.attach(proxy.address);
     await proxy.connect(logicOwner).__SATERC20Token_initialize();
 
     console.log('logic address: ' + logic.address);
