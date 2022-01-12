@@ -13,16 +13,21 @@ describe('SAT', () => {
         addr4,
         addr5,
         addr6,
+        proxyDeployer,
         SAT,
         sat;
 
     const AMOUNT = '1000000000000000000000';
 
     beforeEach(async function () {
-        [deployer, addr1, addr2, addr3, addr4, addr5, addr6] = await ethers.getSigners();
+        [deployer, addr1, addr2, addr3, addr4, addr5, addr6, proxyDeployer] = await ethers.getSigners();
 
         SAT = await ethers.getContractFactory('SATERC20Token');
-        sat = await SAT.deploy();
+        const PROXY = await ethers.getContractFactory('AdminUpgradeabilityProxy');
+
+        sat = await PROXY.connect(proxyDeployer).deploy(proxyDeployer.address, (await SAT.deploy()).address, '0x');
+        sat = await SAT.attach(sat.address);
+        sat.__SATERC20Token_initialize();
         await sat.setVault(deployer.address);
     });
 
