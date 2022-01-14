@@ -1,112 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
-/**
- * @title Initializable
- *
- * @dev Helper contract to support initializer functions. To use it, replace
- * the constructor with a function that has the `initializer` modifier.
- * WARNING: Unlike constructors, initializer functions must be manually
- * invoked. This applies both to deploying an Initializable contract, as well
- * as extending an Initializable contract via inheritance.
- * WARNING: When used with inheritance, manual care must be taken to not invoke
- * a parent initializer twice, or ensure that all initializers are idempotent,
- * because this is not dealt with automatically as with constructors.
- */
-contract Initializable {
-
-    /**
-     * @dev Indicates that the contract has been initialized.
-   */
-    bool private initialized;
-
-    /**
-     * @dev Indicates that the contract is in the process of being initialized.
-   */
-    bool private initializing;
-
-    /**
-     * @dev Modifier to use in the initializer function of a contract.
-   */
-    modifier initializer() {
-        require(initializing || isConstructor() || !initialized, "Contract instance has already been initialized");
-
-        bool isTopLevelCall = !initializing;
-        if (isTopLevelCall) {
-            initializing = true;
-            initialized = true;
-        }
-
-        _;
-
-        if (isTopLevelCall) {
-            initializing = false;
-        }
-    }
-
-    /// @dev Returns true if and only if the function is running in the constructor
-    function isConstructor() private view returns (bool) {
-        // extcodesize checks the size of the code stored in an address, and
-        // address returns the current address. Since the code is still not
-        // deployed when running a constructor, any checks on its code size will
-        // yield zero, making it an effective way to detect if a contract is
-        // under construction or not.
-        address self = address(this);
-        uint256 cs;
-        assembly { cs := extcodesize(self) }
-        return cs == 0;
-    }
-}
-
-interface IOwnable {
-    function owner() external view returns (address);
-
-    function renounceOwnership() external;
-
-    function transferOwnership( address newOwner_ ) external;
-}
-
-contract Ownable is IOwnable, Initializable {
-
-    address internal _owner;
-    address internal _pendingOwner;
-
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    event OwnershipTransferring(address indexed owner, address indexed pendingOwner);
-
-    function __Ownable_init_unchain() internal initializer {
-        require(_owner == address(0));
-        _owner = msg.sender;
-        emit OwnershipTransferred( address(0), _owner );
-    }
-
-    function owner() public view override returns (address) {
-        return _owner;
-    }
-
-    modifier onlyOwner() {
-        require( _owner == msg.sender, "Ownable: caller is not the owner" );
-        _;
-    }
-
-    function renounceOwnership() public virtual override onlyOwner() {
-        emit OwnershipTransferred( _owner, address(0) );
-        _owner = address(0);
-    }
-
-    function transferOwnership( address newOwner_ ) public virtual override onlyOwner() {
-        require( newOwner_ != address(0), "Ownable: new owner is the zero address");
-        emit OwnershipTransferring( _owner, newOwner_ );
-        _pendingOwner = newOwner_;
-    }
-
-    function acceptOwnership() external {
-        require(_pendingOwner == msg.sender, "Permission denied");
-        emit OwnershipTransferred( _owner, msg.sender );
-        _owner = msg.sender;
-    }
-}
-
 interface IERC20 {
     /**
      * @dev Returns the amount of tokens in existence.
@@ -241,6 +135,19 @@ library LowGasSafeMath {
         assert(a == b * c + a % b); // There is no case in which this doesn't hold
 
         return c;
+    }
+
+    function sqrrt(uint256 a) internal pure returns (uint c) {
+        if (a > 3) {
+            c = a;
+            uint b = add( div( a, 2), 1 );
+            while (b < c) {
+                c = b;
+                b = div( add( div( a, b ), b), 2 );
+            }
+        } else if (a != 0) {
+            c = 1;
+        }
     }
 }
 
@@ -527,124 +434,354 @@ library SafeERC20 {
 }
 
 /**
- * @dev Standard math utilities missing in the Solidity language.
+ * @title Initializable
+ *
+ * @dev Helper contract to support initializer functions. To use it, replace
+ * the constructor with a function that has the `initializer` modifier.
+ * WARNING: Unlike constructors, initializer functions must be manually
+ * invoked. This applies both to deploying an Initializable contract, as well
+ * as extending an Initializable contract via inheritance.
+ * WARNING: When used with inheritance, manual care must be taken to not invoke
+ * a parent initializer twice, or ensure that all initializers are idempotent,
+ * because this is not dealt with automatically as with constructors.
  */
-library Math {
-    /**
-     * @dev Returns the largest of two numbers.
-     */
-    function max(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a >= b ? a : b;
-    }
+contract Initializable {
 
     /**
-     * @dev Returns the smallest of two numbers.
-     */
-    function min(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a < b ? a : b;
-    }
+     * @dev Indicates that the contract has been initialized.
+   */
+    bool private initialized;
 
     /**
-     * @dev Returns the average of two numbers. The result is rounded towards
-     * zero.
-     */
-    function average(uint256 a, uint256 b) internal pure returns (uint256) {
-        // (a + b) / 2 can overflow, so we distribute
-        return (a / 2) + (b / 2) + ((a % 2 + b % 2) / 2);
+     * @dev Indicates that the contract is in the process of being initialized.
+   */
+    bool private initializing;
+
+    /**
+     * @dev Modifier to use in the initializer function of a contract.
+   */
+    modifier initializer() {
+        require(initializing || isConstructor() || !initialized, "Contract instance has already been initialized");
+
+        bool isTopLevelCall = !initializing;
+        if (isTopLevelCall) {
+            initializing = true;
+            initialized = true;
+        }
+
+        _;
+
+        if (isTopLevelCall) {
+            initializing = false;
+        }
+    }
+
+    /// @dev Returns true if and only if the function is running in the constructor
+    function isConstructor() private view returns (bool) {
+        // extcodesize checks the size of the code stored in an address, and
+        // address returns the current address. Since the code is still not
+        // deployed when running a constructor, any checks on its code size will
+        // yield zero, making it an effective way to detect if a contract is
+        // under construction or not.
+        address self = address(this);
+        uint256 cs;
+        assembly { cs := extcodesize(self) }
+        return cs == 0;
     }
 }
 
-contract SATTimelock is Ownable {
+interface IOwnable {
+    function owner() external view returns (address);
+
+    function renounceOwnership() external;
+
+    function transferOwnership( address newOwner_ ) external;
+}
+
+contract Ownable is IOwnable, Initializable {
+
+    address internal _owner;
+    address internal _pendingOwner;
+
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    event OwnershipTransferring(address indexed owner, address indexed pendingOwner);
+
+    function __Ownable_init_unchain() internal initializer {
+        require(_owner == address(0));
+        _owner = msg.sender;
+        emit OwnershipTransferred( address(0), _owner );
+    }
+
+    function owner() public view override returns (address) {
+        return _owner;
+    }
+
+    modifier onlyOwner() {
+        require( _owner == msg.sender, "Ownable: caller is not the owner" );
+        _;
+    }
+
+    function renounceOwnership() public virtual override onlyOwner() {
+        emit OwnershipTransferred( _owner, address(0) );
+        _owner = address(0);
+    }
+
+    function transferOwnership( address newOwner_ ) public virtual override onlyOwner() {
+        require( newOwner_ != address(0), "Ownable: new owner is the zero address");
+        emit OwnershipTransferring( _owner, newOwner_ );
+        _pendingOwner = newOwner_;
+    }
+
+    function acceptOwnership() external {
+        require(_pendingOwner == msg.sender, "Permission denied");
+        emit OwnershipTransferred( _owner, msg.sender );
+        _owner = msg.sender;
+    }
+}
+
+interface IERC20Mintable {
+    function mint( uint256 amount_ ) external;
+
+    function mint( address account_, uint256 ammount_ ) external;
+}
+
+contract MockTokenSale is Ownable {
 
     using LowGasSafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    address public token;
-    address public beneficiary;
-    uint256 public duration;
+    uint256 public k;
+    uint256 public kDenominator;
+    uint256 public b;
+    uint256 public bDenominator;
 
-    address internal _beneficiaryPending;
+    uint256 public t0;
 
-    uint256 public benefit;
-    uint256 public benefitClaimed;
-    uint256 public benefitClaimedTotal;
-    uint256 public benefitUnlocked;
-    uint256 public timeUnlockBegin;
-    uint256 public timeUnlockEnd;
-    uint256 public reserveToken;
+    // address of sell token
+    address public token0;
+    // address address of buy token
+    address public token1;
+    // total amount of token0
+    uint256 public amountTotal0;
+    // total amount of token1
+    uint256 public amountTotal1;
+    // the timestamp in seconds the pool will open
+    uint256 public openAt;
+    // the timestamp in seconds the pool will be closed
+    uint256 public closeAt;
+    // whether or not whitelist is enable
+    bool public enableWhiteList;
 
-    function __SATTimelock_initialize(
-        address token_,
-        address beneficiary_,
-        uint256 duration_
+    // maximum swap amount1
+    uint256 public maxAmount1;
+    // maximum swap amount1 per wallet
+    uint256 public maxAmount1PerWallet;
+    uint256 public minAmount1PerWallet;
+
+    mapping(address => bool) public whitelist;
+    mapping(address => bool) public inviteable;
+    mapping(address => uint256) public amountSwapped0;
+    mapping(address => uint256) public amountSwapped1;
+
+    uint256 public ratioInviterReward;
+    uint256 public ratioInviteeReward;
+    uint256 public amountInviterRewardTotal0;
+    uint256 public amountInviteeRewardTotal0;
+    mapping(address => uint256) public amountInviterReward0;
+    mapping(address => uint256) public amountInviteeReward0;
+    mapping(address => uint256) public numberOfInvitee;
+    mapping(address => address) public inviters;
+
+    uint256 public ratioBeneficiary;
+    address payable public beneficiary;
+    address payable public liquidity;
+
+    bool private _inSwapping;
+
+    /* ====== Event ====== */
+
+    event Swapped(address indexed sender, address indexed inviter, uint256 amount0, uint256 amount1);
+
+    /* ====== Modifier ====== */
+    modifier nonReentrant {
+        require(!_inSwapping);
+
+        _inSwapping = true;
+
+        _;
+
+        _inSwapping = false;
+    }
+
+    function __TokenSale_initialize (
+        bool enableWhiteList_,
+        address token0_,
+        address token1_,
+        address payable beneficiary_,
+        address payable liquidity_,
+    // avoids stack too deep errors
+    // [ k_, kDenominator_, b_, bDenominator_, openAt_, closeAt_, maxAmount1_, maxAmount1PerWallet_, minAmount1PerWallet_, ratioBeneficiary_, ratioInviterReward_, ratioInviteeReward_ ]
+        uint256 [] memory uint256Parameters_
     ) external initializer {
         __Ownable_init_unchain();
-        __SATTimelock_init_unchain(token_, beneficiary_, duration_);
+        __TokenSale_init_unchain(enableWhiteList_, token0_, token1_, beneficiary_, liquidity_, uint256Parameters_);
     }
 
-    function __SATTimelock_init_unchain(
-        address token_,
-        address beneficiary_,
-        uint256 duration_
+    function __TokenSale_init_unchain (
+        bool enableWhiteList_,
+        address token0_,
+        address token1_,
+        address payable beneficiary_,
+        address payable liquidity_,
+    // [ k_, kDenominator_, b_, bDenominator_, openAt_, closeAt_, maxAmount1_, maxAmount1PerWallet_, minAmount1PerWallet_, ratioBeneficiary_, ratioInviterReward_, ratioInviteeReward_ ]
+        uint256 [] memory uint256Parameters_
     ) internal initializer {
-        require(token_ != address(0), 'IA');
-        token = token_;
+        require(uint256Parameters_.length == 12, 'Invalid Parameters');
 
-        require(beneficiary_ != address(0), 'IA');
+        k = uint256Parameters_[0];
+        require(uint256Parameters_[1] != 0);
+        kDenominator = uint256Parameters_[1];
+
+        b = uint256Parameters_[2];
+        require(uint256Parameters_[3] != 0);
+        bDenominator = uint256Parameters_[3];
+
+        require(token0_ != address(0), 'IA');
+        token0 = token0_;
+
+//      require(token1_ != address(0), 'IA');
+        token1 = token1_;
+
+        openAt = uint256Parameters_[4];
+        closeAt = uint256Parameters_[5];
+        maxAmount1 = uint256Parameters_[6];
+        maxAmount1PerWallet = uint256Parameters_[7];
+        minAmount1PerWallet = uint256Parameters_[8];
+        ratioBeneficiary = uint256Parameters_[9];
         beneficiary = beneficiary_;
-
-        duration = duration_;
+        liquidity = liquidity_;
+        ratioInviterReward = uint256Parameters_[10];
+        ratioInviteeReward = uint256Parameters_[11];
+        enableWhiteList = enableWhiteList_;
     }
 
-    function unlocked() public view returns (uint256) {
-        uint256 time_ = Math.min(block.timestamp, timeUnlockEnd);
-        uint256 duration_ = timeUnlockEnd.sub(timeUnlockBegin);
-
-        uint256 unlocked_;
-        if (duration_ == 0) unlocked_ = benefit;
-        else unlocked_ = benefit.mul(time_.sub(timeUnlockBegin)).div(duration_);
-
-        return unlocked_.sub(benefitClaimed).add(benefitUnlocked);
+    /* ====== Owner FUNCTIONS ====== */
+    function addWhitelist(address[] calldata whitelist_) external {
+        for (uint256 index = 0; index < whitelist_.length; index ++)
+            whitelist[whitelist_[index]] = true;
     }
 
-    function claimBenefit() external {
-        uint256 unlocked_ = unlocked();
-        require(unlocked_ > 0, 'C0');
-
-        benefitClaimed = benefitClaimed.add(unlocked_).sub(benefitUnlocked);
-        benefitClaimedTotal = benefitClaimedTotal.add(unlocked_);
-        benefitUnlocked = 0;
-        reserveToken = reserveToken.sub(unlocked_);
-        IERC20(token).safeTransfer(beneficiary, unlocked_);
+    function removeWhitelist(address[] calldata whitelist_) external onlyOwner {
+        for (uint256 index = 0; index < whitelist_.length; index ++)
+            whitelist[whitelist_[index]] = false;
     }
 
-    function increaseBenefit() external {
-        uint256 balance_ = IERC20(token).balanceOf(address(this));
-        uint256 amount_ = balance_.sub(reserveToken);
-
-        benefitUnlocked = unlocked();
-
-        uint256 timeLeft_ = 0;
-        uint256 benefitLeft_ = 0;
-        if (timeUnlockEnd > block.timestamp) {
-            timeLeft_ = timeUnlockEnd.sub(block.timestamp);
-            benefitLeft_ = benefit.mul(timeLeft_).div(timeUnlockEnd.sub(timeUnlockBegin));
+    function addInviteable(address[] calldata inviteable_) external {
+        for (uint256 index = 0; index < inviteable_.length; index ++) {
+            inviteable[inviteable_[index]] = true;
+            whitelist[inviteable_[index]] = true;
         }
-        timeLeft_ = benefitLeft_.mul(timeLeft_).add(amount_.mul(duration)).div(benefitLeft_.add(amount_));
-
-        timeUnlockBegin = block.timestamp;
-        timeUnlockEnd = block.timestamp.add(timeLeft_);
-        benefit = benefitLeft_.add(amount_);
-        benefitClaimed = 0;
-        reserveToken = balance_;
     }
 
-    function setBeneficiaryPending(address beneficiary_) external onlyOwner {
-        _beneficiaryPending = beneficiary_;
+    function removeInviteable(address[] calldata inviteable_) external onlyOwner {
+        for (uint256 index = 0; index < inviteable_.length; index ++)
+            inviteable[inviteable_[index]] = false;
     }
 
-    function acceptBeneficiary() external {
-        require(_beneficiaryPending == msg.sender, "Permission denied");
-        beneficiary = msg.sender;
+    // [ k_, kDenominator_, b_, bDenominator_, openAt_, closeAt_, maxAmount1_, maxAmount1PerWallet_, minAmount1PerWallet_, ratioBeneficiary_, ratioInviterReward_, ratioInviteeReward_ ]
+    function setParameters(uint256 [] memory uint256Parameters_) external onlyOwner {
+        require(uint256Parameters_.length == 12, 'Invalid Parameters');
+        if (uint256Parameters_[0] > 0) k = uint256Parameters_[0];
+        if (uint256Parameters_[1] > 0) kDenominator = uint256Parameters_[1];
+        if (uint256Parameters_[2] > 0) b = uint256Parameters_[2];
+        if (uint256Parameters_[3] > 0) bDenominator = uint256Parameters_[3];
+        if (uint256Parameters_[4] > 0) openAt = uint256Parameters_[4];
+        if (uint256Parameters_[5] > 0) closeAt = uint256Parameters_[5];
+        if (uint256Parameters_[6] > 0) maxAmount1 = uint256Parameters_[6];
+        if (uint256Parameters_[7] > 0) maxAmount1PerWallet = uint256Parameters_[7];
+        if (uint256Parameters_[8] > 0) minAmount1PerWallet = uint256Parameters_[8];
+        if (uint256Parameters_[9] > 0) ratioBeneficiary = uint256Parameters_[9];
+        if (uint256Parameters_[10] > 0) ratioInviterReward = uint256Parameters_[10];
+        if (uint256Parameters_[11] > 0) ratioInviteeReward = uint256Parameters_[11];
     }
+
+    /* ====== PUBLIC FUNCTIONS ====== */
+
+    function swap(uint256 amount1_, address inviter_) external payable nonReentrant {
+        address payable sender = msg.sender;
+
+        if (inviters[sender] == address(0)) {
+            numberOfInvitee[inviter_] ++;
+            inviters[sender] = inviter_;
+        }
+        inviter_ = inviters[sender];
+
+        require(inviteable[inviter_]/* && sender != inviter_*/, 'invalid inviter');
+        require(tx.origin == sender, 'disallow contract caller');
+        if (enableWhiteList) require(whitelist[sender], 'sender not on whitelist');
+
+        require(openAt <= block.timestamp, 'not open yet');
+        require(closeAt > block.timestamp, 'closed already');
+        require(minAmount1PerWallet <= amount1_, 'too few');
+        require(
+            maxAmount1 >= amountTotal1.add(amount1_) &&
+            maxAmount1PerWallet >= amountSwapped1[sender].add(amount1_),
+                'swapped amount of token1 is exceeded maximum allowance'
+        );
+
+        uint256 amount0_ = calcT1(amount1_);
+        require(amount0_ < amount1_.mul(bDenominator).div(b), 'wrong price');
+
+        // do transfer
+        if (token1 == address(0)) require(msg.value == amount1_, 'invalid amount of ETH');
+        else IERC20(token1).safeTransferFrom(sender, address(this), amount1_);
+        IERC20Mintable(token0).mint(sender, amount0_);
+
+        // update storage
+        t0 = t0.add(amount0_);
+        amountTotal0 = amountTotal0.add(amount0_);
+        amountTotal1 = amountTotal1.add(amount1_);
+        amountSwapped0[sender] = amountSwapped0[sender].add(amount0_);
+        amountSwapped1[sender] = amountSwapped1[sender].add(amount1_);
+
+        // send token1 to beneficiary
+        uint256 benefit_ = amount1_.mul(ratioBeneficiary).div(1 ether);
+        if (token1 == address(0)) {
+            beneficiary.transfer(benefit_);
+            liquidity.transfer(amount1_.sub(benefit_));
+        } else {
+            IERC20(token1).safeTransfer(beneficiary, benefit_);
+            IERC20(token1).safeTransfer(liquidity, amount1_.sub(benefit_));
+        }
+
+        if (!inviteable[sender]) {
+            uint256 inviteeReward_ = amount0_.mul(ratioInviteeReward).div(1 ether);
+            uint256 inviterReward_ = amount0_.mul(ratioInviterReward).div(1 ether);
+            // update storage
+            amountInviteeReward0[sender] = amountInviteeReward0[sender].add(inviteeReward_);
+            amountInviterReward0[inviter_] = amountInviterReward0[inviter_].add(inviterReward_);
+            amountInviteeRewardTotal0 = amountInviteeRewardTotal0.add(inviteeReward_);
+            amountInviterRewardTotal0 = amountInviterRewardTotal0.add(inviterReward_);
+
+            IERC20Mintable(token0).mint(sender, inviteeReward_);
+            IERC20Mintable(token0).mint(inviter_, inviterReward_);
+        }
+
+        emit Swapped(sender, inviter_, amount0_, amount1_);
+    }
+
+    /* ====== VIEW FUNCTIONS ====== */
+
+    function calcT1(uint256 amount_) public view returns (uint256) {
+        uint256 t0_ = t0;
+
+        uint256 a_ = k;
+        uint256 b_ = uint256(2).mul(b);
+        uint256 n_c_ = uint256(2).mul(amount_).add(a_.mul(t0_).mul(t0_).div(kDenominator)).add(b_.mul(t0_).div(bDenominator));
+
+        uint256 b2_add_4ac = b_.mul(kDenominator).div(bDenominator).mul(b_).div(bDenominator).add(uint256(4).mul(a_).mul(n_c_)).mul(kDenominator);
+
+        return b2_add_4ac.sqrrt().sub(b_.mul(kDenominator).div(bDenominator)).div(uint256(2).mul(a_)).sub(t0_);
+    }
+
 }

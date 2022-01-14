@@ -206,14 +206,14 @@ contract BaseAdminUpgradeabilityProxy is BaseUpgradeabilityProxy {
     /**
      * @return The address of the proxy admin.
    */
-    function admin() external returns (address) {
+    function admin() external view returns (address) {
         return _admin();
     }
 
     /**
      * @return The address of the implementation.
    */
-    function implementation() external returns (address) {
+    function implementation() external view returns (address) {
         return _implementation();
     }
 

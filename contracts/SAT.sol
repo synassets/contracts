@@ -567,7 +567,7 @@ contract VaultOwned is Ownable {
 }
 
 interface ISATTimelock {
-    function increaseBenefit(uint256 amount_) external;
+    function increaseBenefit() external;
 }
 
 contract SATERC20Token is ERC20Permit, VaultOwned, Pausable {
@@ -593,9 +593,8 @@ contract SATERC20Token is ERC20Permit, VaultOwned, Pausable {
             uint256 fee_ = amount_.mul(RATIO_FEE).div(1 ether);
             require(totalSupply().add(fee_) <= CAP, 'CE');
 
-            _mint(address(this), fee_);
-            _approve(address(this), feeAddress, fee_);
-            ISATTimelock(feeAddress).increaseBenefit(fee_);
+            _mint(feeAddress, fee_);
+            ISATTimelock(feeAddress).increaseBenefit();
         }
     }
 
