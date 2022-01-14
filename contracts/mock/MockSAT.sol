@@ -582,7 +582,7 @@ contract MockSATERC20Token is ERC20Permit, VaultOwned, Pausable {
     mapping(address => bool) public isTransferWhitelist;
 
     function __SATERC20Token_initialize() external initializer {
-        __ERC20_init_unchained("Synassets Token", "SAT", 18);
+        __ERC20_init_unchained("Test Synassets Token", "TSAT", 18);
         __VaultOwned_init_unchain();
     }
 

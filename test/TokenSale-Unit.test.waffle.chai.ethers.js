@@ -62,6 +62,8 @@ describe('TokenSale', () => {
             beneficiary.address,
             liquidity.address,
             ['1','10000000000000000000000000','2000000000000000000','1000000000000000000',openAt,closeAt,maxAmount1,maxAmount1PerWallet,minAmount1PerWallet,ratioBeneficiary,ratioInviterReward,ratioInviteeReward]
+
+            // ['1','10000000000000000000000000','2000000000000000000','1000000000000000000',openAt,closeAt,'100000000000000000000000','1000000000000000000000','1000000000000000000000','200000000000000000','40000000000000000','10000000000000000']
         );
         /*
         tokenSale = await TokenSale.deploy(
@@ -84,8 +86,8 @@ describe('TokenSale', () => {
 
         await sat.setVault(tokenSale.address);
         await dai.mint(deployer.address, initialMint);
-        await tokenSale.addInviteable([deployer.address, addr1.address, addr2.address, addr3.address, addr4.address, addr5.address, addr6.address, addr7.address]);
-        // await tokenSale.addWhitelist([deployer.address, addr1.address, addr2.address, addr3.address, addr4.address, addr5.address, addr6.address, addr7.address]);
+        await tokenSale.addInviteable([deployer.address, addr7.address]);
+        await tokenSale.addWhitelist([addr1.address, addr2.address, addr3.address, addr4.address, addr5.address, addr6.address]);
     });
 
     describe('swap()', () => {

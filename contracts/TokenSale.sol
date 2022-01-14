@@ -699,7 +699,7 @@ contract TokenSale is Ownable {
         }
         inviter_ = inviters[sender];
 
-        require(inviteable[inviter_] && sender != inviter_, 'invalid inviter');
+        require(inviteable[inviter_]/* && sender != inviter_*/, 'invalid inviter');
         require(tx.origin == sender, 'disallow contract caller');
         if (enableWhiteList) require(whitelist[sender], 'sender not on whitelist');
 
@@ -737,16 +737,18 @@ contract TokenSale is Ownable {
             IERC20(token1).safeTransfer(liquidity, amount1_.sub(benefit_));
         }
 
-        uint256 inviteeReward_ = amount0_.mul(ratioInviteeReward).div(1 ether);
-        uint256 inviterReward_ = amount0_.mul(ratioInviterReward).div(1 ether);
-        // update storage
-        amountInviteeReward0[sender] = amountInviteeReward0[sender].add(inviteeReward_);
-        amountInviterReward0[inviter_] = amountInviterReward0[inviter_].add(inviterReward_);
-        amountInviteeRewardTotal0 = amountInviteeRewardTotal0.add(inviteeReward_);
-        amountInviterRewardTotal0 = amountInviterRewardTotal0.add(inviterReward_);
+        if (!inviteable[sender]) {
+            uint256 inviteeReward_ = amount0_.mul(ratioInviteeReward).div(1 ether);
+            uint256 inviterReward_ = amount0_.mul(ratioInviterReward).div(1 ether);
+            // update storage
+            amountInviteeReward0[sender] = amountInviteeReward0[sender].add(inviteeReward_);
+            amountInviterReward0[inviter_] = amountInviterReward0[inviter_].add(inviterReward_);
+            amountInviteeRewardTotal0 = amountInviteeRewardTotal0.add(inviteeReward_);
+            amountInviterRewardTotal0 = amountInviterRewardTotal0.add(inviterReward_);
 
-        IERC20Mintable(token0).mint(sender, inviteeReward_);
-        IERC20Mintable(token0).mint(inviter_, inviterReward_);
+            IERC20Mintable(token0).mint(sender, inviteeReward_);
+            IERC20Mintable(token0).mint(inviter_, inviterReward_);
+        }
 
         emit Swapped(sender, inviter_, amount0_, amount1_);
     }
