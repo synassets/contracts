@@ -433,6 +433,63 @@ library SafeERC20 {
     }
 }
 
+/**
+ * @title Initializable
+ *
+ * @dev Helper contract to support initializer functions. To use it, replace
+ * the constructor with a function that has the `initializer` modifier.
+ * WARNING: Unlike constructors, initializer functions must be manually
+ * invoked. This applies both to deploying an Initializable contract, as well
+ * as extending an Initializable contract via inheritance.
+ * WARNING: When used with inheritance, manual care must be taken to not invoke
+ * a parent initializer twice, or ensure that all initializers are idempotent,
+ * because this is not dealt with automatically as with constructors.
+ */
+contract Initializable {
+
+    /**
+     * @dev Indicates that the contract has been initialized.
+   */
+    bool private initialized;
+
+    /**
+     * @dev Indicates that the contract is in the process of being initialized.
+   */
+    bool private initializing;
+
+    /**
+     * @dev Modifier to use in the initializer function of a contract.
+   */
+    modifier initializer() {
+        require(initializing || isConstructor() || !initialized, "Contract instance has already been initialized");
+
+        bool isTopLevelCall = !initializing;
+        if (isTopLevelCall) {
+            initializing = true;
+            initialized = true;
+        }
+
+        _;
+
+        if (isTopLevelCall) {
+            initializing = false;
+        }
+    }
+
+    /// @dev Returns true if and only if the function is running in the constructor
+    function isConstructor() private view returns (bool) {
+        // extcodesize checks the size of the code stored in an address, and
+        // address returns the current address. Since the code is still not
+        // deployed when running a constructor, any checks on its code size will
+        // yield zero, making it an effective way to detect if a contract is
+        // under construction or not.
+        address self = address(this);
+        uint256 cs;
+        assembly { cs := extcodesize(self) }
+        return cs == 0;
+    }
+}
+
 interface IOwnable {
     function owner() external view returns (address);
 
@@ -441,13 +498,16 @@ interface IOwnable {
     function transferOwnership( address newOwner_ ) external;
 }
 
-contract Ownable is IOwnable {
+contract Ownable is IOwnable, Initializable {
 
     address internal _owner;
+    address internal _pendingOwner;
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    event OwnershipTransferring(address indexed owner, address indexed pendingOwner);
 
-    constructor () {
+    function __Ownable_init_unchain() internal initializer {
+        require(_owner == address(0));
         _owner = msg.sender;
         emit OwnershipTransferred( address(0), _owner );
     }
@@ -468,8 +528,14 @@ contract Ownable is IOwnable {
 
     function transferOwnership( address newOwner_ ) public virtual override onlyOwner() {
         require( newOwner_ != address(0), "Ownable: new owner is the zero address");
-        emit OwnershipTransferred( _owner, newOwner_ );
-        _owner = newOwner_;
+        emit OwnershipTransferring( _owner, newOwner_ );
+        _pendingOwner = newOwner_;
+    }
+
+    function acceptOwnership() external {
+        require(_pendingOwner == msg.sender, "Permission denied");
+        emit OwnershipTransferred( _owner, msg.sender );
+        _owner = msg.sender;
     }
 }
 
@@ -526,7 +592,9 @@ contract TokenSale is Ownable {
     mapping(address => uint256) public numberOfInvitee;
     mapping(address => address) public inviters;
 
+    uint256 public ratioBeneficiary;
     address payable public beneficiary;
+    address payable public liquidity;
 
     bool private _inSwapping;
 
@@ -545,30 +613,38 @@ contract TokenSale is Ownable {
         _inSwapping = false;
     }
 
-    constructor (
-        uint256 k_,
-        uint256 kDenominator_,
-        uint256 b_,
-        uint256 bDenominator_,
+    function __TokenSale_initialize (
+        bool enableWhiteList_,
         address token0_,
         address token1_,
-        uint256 openAt_,
-        uint256 closeAt_,
-        bool enableWhiteList_,
-        uint256 maxAmount1_,
-        uint256 maxAmount1PerWallet_,
-        uint256 minAmount1PerWallet_,
         address payable beneficiary_,
-        uint256 ratioInviterReward_,
-        uint256 ratioInviteeReward_
-    ) {
-        k = k_;
-        require(kDenominator_ != 0);
-        kDenominator = kDenominator_;
+        address payable liquidity_,
+    // avoids stack too deep errors
+    // [ k_, kDenominator_, b_, bDenominator_, openAt_, closeAt_, maxAmount1_, maxAmount1PerWallet_, minAmount1PerWallet_, ratioBeneficiary_, ratioInviterReward_, ratioInviteeReward_ ]
+        uint256 [] memory uint256Parameters_
+    ) external initializer {
+        __Ownable_init_unchain();
+        __TokenSale_init_unchain(enableWhiteList_, token0_, token1_, beneficiary_, liquidity_, uint256Parameters_);
+    }
 
-        b = b_;
-        require(bDenominator_ != 0);
-        bDenominator = bDenominator_;
+    function __TokenSale_init_unchain (
+        bool enableWhiteList_,
+        address token0_,
+        address token1_,
+        address payable beneficiary_,
+        address payable liquidity_,
+    // [ k_, kDenominator_, b_, bDenominator_, openAt_, closeAt_, maxAmount1_, maxAmount1PerWallet_, minAmount1PerWallet_, ratioBeneficiary_, ratioInviterReward_, ratioInviteeReward_ ]
+        uint256 [] memory uint256Parameters_
+    ) internal initializer {
+        require(uint256Parameters_.length == 12, 'Invalid Parameters');
+
+        k = uint256Parameters_[0];
+        require(uint256Parameters_[1] != 0);
+        kDenominator = uint256Parameters_[1];
+
+        b = uint256Parameters_[2];
+        require(uint256Parameters_[3] != 0);
+        bDenominator = uint256Parameters_[3];
 
         require(token0_ != address(0), 'IA');
         token0 = token0_;
@@ -576,15 +652,17 @@ contract TokenSale is Ownable {
 //      require(token1_ != address(0), 'IA');
         token1 = token1_;
 
-        openAt = openAt_;
-        closeAt = closeAt_;
-        enableWhiteList = enableWhiteList_;
-        maxAmount1 = maxAmount1_;
-        maxAmount1PerWallet = maxAmount1PerWallet_;
-        minAmount1PerWallet = minAmount1PerWallet_;
+        openAt = uint256Parameters_[4];
+        closeAt = uint256Parameters_[5];
+        maxAmount1 = uint256Parameters_[6];
+        maxAmount1PerWallet = uint256Parameters_[7];
+        minAmount1PerWallet = uint256Parameters_[8];
+        ratioBeneficiary = uint256Parameters_[9];
         beneficiary = beneficiary_;
-        ratioInviterReward = ratioInviterReward_;
-        ratioInviteeReward = ratioInviteeReward_;
+        liquidity = liquidity_;
+        ratioInviterReward = uint256Parameters_[10];
+        ratioInviteeReward = uint256Parameters_[11];
+        enableWhiteList = enableWhiteList_;
     }
 
     /* ====== Owner FUNCTIONS ====== */
@@ -599,8 +677,10 @@ contract TokenSale is Ownable {
     }
 
     function addInviteable(address[] calldata inviteable_) external onlyOwner {
-        for (uint256 index = 0; index < inviteable_.length; index ++)
+        for (uint256 index = 0; index < inviteable_.length; index ++) {
             inviteable[inviteable_[index]] = true;
+            whitelist[inviteable_[index]] = true;
+        }
     }
 
     function removeInviteable(address[] calldata inviteable_) external onlyOwner {
@@ -648,8 +728,14 @@ contract TokenSale is Ownable {
         amountSwapped1[sender] = amountSwapped1[sender].add(amount1_);
 
         // send token1 to beneficiary
-        if (token1 == address(0)) beneficiary.transfer(amount1_);
-        else IERC20(token1).safeTransfer(beneficiary, amount1_);
+        uint256 benefit_ = amount1_.mul(ratioBeneficiary).div(1 ether);
+        if (token1 == address(0)) {
+            beneficiary.transfer(benefit_);
+            liquidity.transfer(amount1_.sub(benefit_));
+        } else {
+            IERC20(token1).safeTransfer(beneficiary, benefit_);
+            IERC20(token1).safeTransfer(liquidity, amount1_.sub(benefit_));
+        }
 
         uint256 inviteeReward_ = amount0_.mul(ratioInviteeReward).div(1 ether);
         uint256 inviterReward_ = amount0_.mul(ratioInviterReward).div(1 ether);
