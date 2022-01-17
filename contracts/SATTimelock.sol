@@ -560,38 +560,38 @@ contract SATTimelock is Ownable {
     using SafeERC20 for IERC20;
 
     address public token;
-    address public beneficiary;
+    address public claimAddress;
     uint256 public duration;
 
-    address internal _beneficiaryPending;
+    address internal _claimAddressPending;
 
-    uint256 public benefit;
-    uint256 public benefitClaimed;
-    uint256 public benefitClaimedTotal;
-    uint256 public benefitUnlocked;
+    uint256 public reward;
+    uint256 public rewardClaimed;
+    uint256 public rewardClaimedTotal;
+    uint256 public rewardUnlocked;
     uint256 public timeUnlockBegin;
     uint256 public timeUnlockEnd;
     uint256 public reserveToken;
 
     function __SATTimelock_initialize(
         address token_,
-        address beneficiary_,
+        address claimAddress_,
         uint256 duration_
     ) external initializer {
         __Ownable_init_unchain();
-        __SATTimelock_init_unchain(token_, beneficiary_, duration_);
+        __SATTimelock_init_unchain(token_, claimAddress_, duration_);
     }
 
     function __SATTimelock_init_unchain(
         address token_,
-        address beneficiary_,
+        address claimAddress_,
         uint256 duration_
     ) internal initializer {
         require(token_ != address(0), 'IA');
         token = token_;
 
-        require(beneficiary_ != address(0), 'IA');
-        beneficiary = beneficiary_;
+        require(claimAddress_ != address(0), 'IA');
+        claimAddress = claimAddress_;
 
         duration = duration_;
     }
@@ -601,50 +601,50 @@ contract SATTimelock is Ownable {
         uint256 duration_ = timeUnlockEnd.sub(timeUnlockBegin);
 
         uint256 unlocked_;
-        if (duration_ == 0) unlocked_ = benefit;
-        else unlocked_ = benefit.mul(time_.sub(timeUnlockBegin)).div(duration_);
+        if (duration_ == 0) unlocked_ = reward;
+        else unlocked_ = reward.mul(time_.sub(timeUnlockBegin)).div(duration_);
 
-        return unlocked_.sub(benefitClaimed).add(benefitUnlocked);
+        return unlocked_.sub(rewardClaimed).add(rewardUnlocked);
     }
 
-    function claimBenefit() external {
+    function claimReward() external {
         uint256 unlocked_ = unlocked();
         require(unlocked_ > 0, 'C0');
 
-        benefitClaimed = benefitClaimed.add(unlocked_).sub(benefitUnlocked);
-        benefitClaimedTotal = benefitClaimedTotal.add(unlocked_);
-        benefitUnlocked = 0;
+        rewardClaimed = rewardClaimed.add(unlocked_).sub(rewardUnlocked);
+        rewardClaimedTotal = rewardClaimedTotal.add(unlocked_);
+        rewardUnlocked = 0;
         reserveToken = reserveToken.sub(unlocked_);
-        IERC20(token).safeTransfer(beneficiary, unlocked_);
+        IERC20(token).safeTransfer(claimAddress, unlocked_);
     }
 
-    function increaseBenefit() external {
+    function increaseReward() external {
         uint256 balance_ = IERC20(token).balanceOf(address(this));
         uint256 amount_ = balance_.sub(reserveToken);
 
-        benefitUnlocked = unlocked();
+        rewardUnlocked = unlocked();
 
         uint256 timeLeft_ = 0;
-        uint256 benefitLeft_ = 0;
+        uint256 rewardLeft_ = 0;
         if (timeUnlockEnd > block.timestamp) {
             timeLeft_ = timeUnlockEnd.sub(block.timestamp);
-            benefitLeft_ = benefit.mul(timeLeft_).div(timeUnlockEnd.sub(timeUnlockBegin));
+            rewardLeft_ = reward.mul(timeLeft_).div(timeUnlockEnd.sub(timeUnlockBegin));
         }
-        timeLeft_ = benefitLeft_.mul(timeLeft_).add(amount_.mul(duration)).div(benefitLeft_.add(amount_));
+        timeLeft_ = rewardLeft_.mul(timeLeft_).add(amount_.mul(duration)).div(rewardLeft_.add(amount_));
 
         timeUnlockBegin = block.timestamp;
         timeUnlockEnd = block.timestamp.add(timeLeft_);
-        benefit = benefitLeft_.add(amount_);
-        benefitClaimed = 0;
+        reward = rewardLeft_.add(amount_);
+        rewardClaimed = 0;
         reserveToken = balance_;
     }
 
-    function setBeneficiaryPending(address beneficiary_) external onlyOwner {
-        _beneficiaryPending = beneficiary_;
+    function setClaimAddressPending(address claimAddress_) external onlyOwner {
+        _claimAddressPending = claimAddress_;
     }
 
-    function acceptBeneficiary() external {
-        require(_beneficiaryPending == msg.sender, "Permission denied");
-        beneficiary = msg.sender;
+    function acceptClaimAddress() external {
+        require(_claimAddressPending == msg.sender, "Permission denied");
+        claimAddress = msg.sender;
     }
 }

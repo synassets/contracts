@@ -593,7 +593,9 @@ contract TokenSale is Ownable {
     mapping(address => address) public inviters;
 
     uint256 public ratioBeneficiary;
+    // Marketing promotion
     address payable public beneficiary;
+    // SynAssets Liquidity Pool(LP) fund
     address payable public liquidity;
 
     bool private _inSwapping;

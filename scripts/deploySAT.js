@@ -24,6 +24,9 @@ async function main() {
     proxySATTIMELOCK = await SATTIMELOCK.attach(proxySATTIMELOCK.address);
     await proxySATTIMELOCK.connect(logicOwner).__SATTimelock_initialize(proxySAT.address, logicOwner.address, 60*24*60*60);
 
+    await proxySAT.connect(logicOwner).pauseTransfer();
+    await proxySAT.connect(logicOwner).setFeeAddress(proxySATTIMELOCK.address);
+
     console.log('logicSAT address: ' + logicSAT.address);
     console.log('logicSATTIMELOCK address: ' + logicSATTIMELOCK.address);
 

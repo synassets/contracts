@@ -214,10 +214,6 @@ contract BaseAdminUpgradeabilityProxy is BaseUpgradeabilityProxy {
         return _admin();
     }
 
-    function pendingAdmin() external view returns (address) {
-        return _pendingAdmin();
-    }
-
     /**
      * @return The address of the implementation.
    */
@@ -228,6 +224,7 @@ contract BaseAdminUpgradeabilityProxy is BaseUpgradeabilityProxy {
     function renounceAdmin() external ifAdmin {
         emit AdminChanged(_admin(), address(0));
         _setAdmin(address(0));
+        _setPendingAdmin(address(0));
     }
 
     /**
@@ -245,6 +242,7 @@ contract BaseAdminUpgradeabilityProxy is BaseUpgradeabilityProxy {
         require(_pendingAdmin() == msg.sender, "Permission denied");
         emit AdminChanged(_admin(), msg.sender);
         _setAdmin(msg.sender);
+        _setPendingAdmin(address(0));
     }
 
     /**

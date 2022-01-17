@@ -315,96 +315,6 @@ abstract contract ERC20 is IERC20, Initializable {
     function _beforeTokenTransfer( address from_, address to_, uint256 amount_ ) internal virtual { }
 }
 
-library Counters {
-    using LowGasSafeMath for uint256;
-
-    struct Counter {
-        uint256 _value; // default: 0
-    }
-
-    function current(Counter storage counter) internal view returns (uint256) {
-        return counter._value;
-    }
-
-    function increment(Counter storage counter) internal {
-        counter._value += 1;
-    }
-
-    function decrement(Counter storage counter) internal {
-        counter._value = counter._value.sub(1);
-    }
-}
-
-interface IERC2612Permit {
-
-    function permit(
-        address owner,
-        address spender,
-        uint256 amount,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external;
-
-    function nonces(address owner) external view returns (uint256);
-}
-
-abstract contract ERC20Permit is ERC20, IERC2612Permit {
-    using Counters for Counters.Counter;
-
-    mapping(address => Counters.Counter) private _nonces;
-
-    // keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
-    bytes32 public constant PERMIT_TYPEHASH = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
-
-    bytes32 public DOMAIN_SEPARATOR;
-
-    constructor() {
-        uint256 chainID;
-        assembly {
-            chainID := chainid()
-        }
-
-        DOMAIN_SEPARATOR = keccak256(
-            abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256(bytes(name())),
-                keccak256(bytes("1")), // Version
-                chainID,
-                address(this)
-            )
-        );
-    }
-
-    function permit(
-        address owner,
-        address spender,
-        uint256 amount,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) public virtual override {
-        require(block.timestamp <= deadline, "Permit: expired deadline");
-
-        bytes32 hashStruct =
-        keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, amount, _nonces[owner].current(), deadline));
-
-        bytes32 _hash = keccak256(abi.encodePacked(uint16(0x1901), DOMAIN_SEPARATOR, hashStruct));
-
-        address signer = ecrecover(_hash, v, r, s);
-        require(signer != address(0) && signer == owner, "ERC20Permit: Invalid signature");
-
-        _nonces[owner].increment();
-        _approve(owner, spender, amount);
-    }
-
-    function nonces(address owner) public view override returns (uint256) {
-        return _nonces[owner].current();
-    }
-}
-
 /**
  * @dev Contract module which allows children to implement an emergency stop
  * mechanism that can be triggered by an authorized account.
@@ -567,17 +477,17 @@ contract VaultOwned is Ownable {
 }
 
 interface ISATTimelock {
-    function increaseBenefit() external;
+    function increaseReward() external;
 }
 
-contract SATERC20Token is ERC20Permit, VaultOwned, Pausable {
+contract SATERC20Token is ERC20, VaultOwned, Pausable {
 
     using LowGasSafeMath for uint256;
 
     uint256 public constant CAP = 10**8 * 1 ether;
     uint256 public constant RATIO_FEE = 0.1 ether;
 
-    address public feeAddress;
+    address public lockedAddress;
     mapping(address => bool) public isTransferWhitelist;
 
     function __SATERC20Token_initialize() external initializer {
@@ -589,12 +499,12 @@ contract SATERC20Token is ERC20Permit, VaultOwned, Pausable {
         require(totalSupply().add(amount_) <= CAP, 'CE');
         _mint(account_, amount_);
 
-        if (feeAddress != address(0)) {
+        if (lockedAddress != address(0)) {
             uint256 fee_ = amount_.mul(RATIO_FEE).div(1 ether);
             require(totalSupply().add(fee_) <= CAP, 'CE');
 
-            _mint(feeAddress, fee_);
-            ISATTimelock(feeAddress).increaseBenefit();
+            _mint(lockedAddress, fee_);
+            ISATTimelock(lockedAddress).increaseReward();
         }
     }
 
@@ -639,8 +549,8 @@ contract SATERC20Token is ERC20Permit, VaultOwned, Pausable {
         _pause();
     }
 
-    function setFeeAddress(address feeAddress_) external onlyOwner {
-        feeAddress = feeAddress_;
+    function setLockedAddress(address lockedAddress_) external onlyOwner {
+        lockedAddress = lockedAddress_;
     }
 
     function maxSupply() public pure returns (uint256) {
