@@ -217,6 +217,11 @@ contract BaseAdminUpgradeabilityProxy is BaseUpgradeabilityProxy {
         return _implementation();
     }
 
+    function renounceAdmin() external ifAdmin {
+        emit AdminChanged(_admin(), address(0));
+        _setAdmin(address(0));
+    }
+
     /**
      * @dev Changes the admin of the proxy.
    * Only the current admin can call this function.
