@@ -188,7 +188,11 @@ contract BaseAdminUpgradeabilityProxy is BaseUpgradeabilityProxy {
 
     bytes32 internal constant ADMIN_SLOT = 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103;
 
-    address internal _pendingAdmin;
+    /**
+     * @dev Storage slot with the pending admin of the contract.
+     * This is the keccak-256 hash of "synassets.proxy.pendingadmin" subtracted by 1
+     */
+    bytes32 internal constant PENDING_ADMIN_SLOT = 0x2e33589be650fc2441ee02dbd5d3b7b4666498c1b6698098f2920e8c31bd39f4;
 
     /**
      * @dev Modifier to check whether the `msg.sender` is the admin.
@@ -208,6 +212,10 @@ contract BaseAdminUpgradeabilityProxy is BaseUpgradeabilityProxy {
    */
     function admin() external view returns (address) {
         return _admin();
+    }
+
+    function pendingAdmin() external view returns (address) {
+        return _pendingAdmin();
     }
 
     /**
@@ -230,11 +238,11 @@ contract BaseAdminUpgradeabilityProxy is BaseUpgradeabilityProxy {
     function changeAdmin(address newAdmin) external ifAdmin {
         require(newAdmin != address(0), "Cannot change the admin of a proxy to the zero address");
         emit AdminPending(_admin(), newAdmin);
-        _pendingAdmin = newAdmin;
+        _setPendingAdmin(newAdmin);
     }
 
     function accept() external  {
-        require(_pendingAdmin == msg.sender, "Permission denied");
+        require(_pendingAdmin() == msg.sender, "Permission denied");
         emit AdminChanged(_admin(), msg.sender);
         _setAdmin(msg.sender);
     }
@@ -273,6 +281,13 @@ contract BaseAdminUpgradeabilityProxy is BaseUpgradeabilityProxy {
         }
     }
 
+    function _pendingAdmin() internal view returns (address pendingAdm) {
+        bytes32 slot = PENDING_ADMIN_SLOT;
+        assembly {
+            pendingAdm := sload(slot)
+        }
+    }
+
     /**
      * @dev Sets the address of the proxy admin.
    * @param newAdmin Address of the new proxy admin.
@@ -282,6 +297,14 @@ contract BaseAdminUpgradeabilityProxy is BaseUpgradeabilityProxy {
 
         assembly {
             sstore(slot, newAdmin)
+        }
+    }
+
+    function _setPendingAdmin(address newPendingAdmin) internal {
+        bytes32 slot = PENDING_ADMIN_SLOT;
+
+        assembly {
+            sstore(slot, newPendingAdmin)
         }
     }
 
