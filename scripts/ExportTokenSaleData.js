@@ -51,7 +51,7 @@ async function main() {
         addr7.address,
         // 0.05  1000000 USDC  sat decimal        usdc decimal
         //"100  000000000000  000000000000000000  000000"
-        ["5","100000000","150000","1",openAt,closeAt,(BigInt(maxAmount1PerWallet) * BigInt(numberAddress)).toString(),maxAmount1PerWallet,maxAmount1PerWallet,"40000000000000000","10000000000000000"]
+        ["15","363636300000000000000000000000000000000","20","100000000000000",openAt,closeAt,(BigInt(maxAmount1PerWallet) * BigInt(numberAddress)).toString(),maxAmount1PerWallet,maxAmount1PerWallet,"40000000000000000","10000000000000000"]
     );
 
     await sat.setVault(tokenSale_.address);

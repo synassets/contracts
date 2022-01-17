@@ -691,7 +691,7 @@ contract MockTokenSale is Ownable {
 
     // [ k_, kDenominator_, b_, bDenominator_, openAt_, closeAt_, maxAmount1_, maxAmount1PerWallet_, minAmount1PerWallet_, ratioInviterReward_, ratioInviteeReward_ ]
     function setParameters(uint256 [] memory uint256Parameters_) external onlyOwner {
-        require(uint256Parameters_.length == 12, 'Invalid Parameters');
+        require(uint256Parameters_.length == 11, 'Invalid Parameters');
         if (uint256Parameters_[0] > 0) k = uint256Parameters_[0];
         if (uint256Parameters_[1] > 0) kDenominator = uint256Parameters_[1];
         if (uint256Parameters_[2] > 0) b = uint256Parameters_[2];
