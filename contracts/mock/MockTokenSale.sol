@@ -592,9 +592,11 @@ contract MockTokenSale is Ownable {
     mapping(address => uint256) public numberOfInvitee;
     mapping(address => address) public inviters;
 
-    uint256 public ratioBeneficiary;
-    address payable public beneficiary;
-    address payable public liquidity;
+    uint256 public constant ratio = 0.2 ether;
+    // Marketing promotion
+    address payable public marketFund;
+    // SynAssets Liquidity Pool(LP) fund
+    address payable public liquidityFund;
 
     bool private _inSwapping;
 
@@ -617,26 +619,26 @@ contract MockTokenSale is Ownable {
         bool enableWhiteList_,
         address token0_,
         address token1_,
-        address payable beneficiary_,
-        address payable liquidity_,
+        address payable marketFund_,
+        address payable liquidityFund_,
     // avoids stack too deep errors
-    // [ k_, kDenominator_, b_, bDenominator_, openAt_, closeAt_, maxAmount1_, maxAmount1PerWallet_, minAmount1PerWallet_, ratioBeneficiary_, ratioInviterReward_, ratioInviteeReward_ ]
+    // [ k_, kDenominator_, b_, bDenominator_, openAt_, closeAt_, maxAmount1_, maxAmount1PerWallet_, minAmount1PerWallet_, ratioInviterReward_, ratioInviteeReward_ ]
         uint256 [] memory uint256Parameters_
     ) external initializer {
         __Ownable_init_unchain();
-        __TokenSale_init_unchain(enableWhiteList_, token0_, token1_, beneficiary_, liquidity_, uint256Parameters_);
+        __TokenSale_init_unchain(enableWhiteList_, token0_, token1_, marketFund_, liquidityFund_, uint256Parameters_);
     }
 
     function __TokenSale_init_unchain (
         bool enableWhiteList_,
         address token0_,
         address token1_,
-        address payable beneficiary_,
-        address payable liquidity_,
-    // [ k_, kDenominator_, b_, bDenominator_, openAt_, closeAt_, maxAmount1_, maxAmount1PerWallet_, minAmount1PerWallet_, ratioBeneficiary_, ratioInviterReward_, ratioInviteeReward_ ]
+        address payable marketFund_,
+        address payable liquidityFund_,
+    // [ k_, kDenominator_, b_, bDenominator_, openAt_, closeAt_, maxAmount1_, maxAmount1PerWallet_, minAmount1PerWallet_, ratioInviterReward_, ratioInviteeReward_ ]
         uint256 [] memory uint256Parameters_
     ) internal initializer {
-        require(uint256Parameters_.length == 12, 'Invalid Parameters');
+        require(uint256Parameters_.length == 11, 'Invalid Parameters');
 
         k = uint256Parameters_[0];
         require(uint256Parameters_[1] != 0);
@@ -657,11 +659,10 @@ contract MockTokenSale is Ownable {
         maxAmount1 = uint256Parameters_[6];
         maxAmount1PerWallet = uint256Parameters_[7];
         minAmount1PerWallet = uint256Parameters_[8];
-        ratioBeneficiary = uint256Parameters_[9];
-        beneficiary = beneficiary_;
-        liquidity = liquidity_;
-        ratioInviterReward = uint256Parameters_[10];
-        ratioInviteeReward = uint256Parameters_[11];
+        marketFund = marketFund_;
+        liquidityFund = liquidityFund_;
+        ratioInviterReward = uint256Parameters_[9];
+        ratioInviteeReward = uint256Parameters_[10];
         enableWhiteList = enableWhiteList_;
     }
 
@@ -688,7 +689,7 @@ contract MockTokenSale is Ownable {
             inviteable[inviteable_[index]] = false;
     }
 
-    // [ k_, kDenominator_, b_, bDenominator_, openAt_, closeAt_, maxAmount1_, maxAmount1PerWallet_, minAmount1PerWallet_, ratioBeneficiary_, ratioInviterReward_, ratioInviteeReward_ ]
+    // [ k_, kDenominator_, b_, bDenominator_, openAt_, closeAt_, maxAmount1_, maxAmount1PerWallet_, minAmount1PerWallet_, ratioInviterReward_, ratioInviteeReward_ ]
     function setParameters(uint256 [] memory uint256Parameters_) external onlyOwner {
         require(uint256Parameters_.length == 12, 'Invalid Parameters');
         if (uint256Parameters_[0] > 0) k = uint256Parameters_[0];
@@ -700,9 +701,8 @@ contract MockTokenSale is Ownable {
         if (uint256Parameters_[6] > 0) maxAmount1 = uint256Parameters_[6];
         if (uint256Parameters_[7] > 0) maxAmount1PerWallet = uint256Parameters_[7];
         if (uint256Parameters_[8] > 0) minAmount1PerWallet = uint256Parameters_[8];
-        if (uint256Parameters_[9] > 0) ratioBeneficiary = uint256Parameters_[9];
-        if (uint256Parameters_[10] > 0) ratioInviterReward = uint256Parameters_[10];
-        if (uint256Parameters_[11] > 0) ratioInviteeReward = uint256Parameters_[11];
+        if (uint256Parameters_[9] > 0) ratioInviterReward = uint256Parameters_[9];
+        if (uint256Parameters_[10] > 0) ratioInviteeReward = uint256Parameters_[10];
     }
 
     /* ====== PUBLIC FUNCTIONS ====== */
@@ -745,13 +745,13 @@ contract MockTokenSale is Ownable {
         amountSwapped1[sender] = amountSwapped1[sender].add(amount1_);
 
         // send token1 to beneficiary
-        uint256 benefit_ = amount1_.mul(ratioBeneficiary).div(1 ether);
+        uint256 marketFundAmount_ = amount1_.mul(ratio).div(1 ether);
         if (token1 == address(0)) {
-            beneficiary.transfer(benefit_);
-            liquidity.transfer(amount1_.sub(benefit_));
+            marketFund.transfer(marketFundAmount_);
+            liquidityFund.transfer(amount1_.sub(marketFundAmount_));
         } else {
-            IERC20(token1).safeTransfer(beneficiary, benefit_);
-            IERC20(token1).safeTransfer(liquidity, amount1_.sub(benefit_));
+            IERC20(token1).safeTransfer(marketFund, marketFundAmount_);
+            IERC20(token1).safeTransfer(liquidityFund, amount1_.sub(marketFundAmount_));
         }
 
         if (!inviteable[sender]) {

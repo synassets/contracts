@@ -318,12 +318,12 @@ abstract contract ERC20 is IERC20, Initializable {
 contract MockUSDC is ERC20 {
 
     function __MockUSDC_initialize() external initializer {
-        __ERC20_init_unchained('TEST USDC', 'TestUSDC', 18);
+        __ERC20_init_unchained('TEST USDC', 'TestUSDC', 6);
     }
 
     // allow anyone to mint
     function mint() external {
-        _mint(msg.sender, 20000 * 1e18);
+        _mint(msg.sender, 20000 * 1e6);
     }
 
 }
