@@ -13,7 +13,7 @@ Local Setup Steps:
     - Installs [Hardhat](https://hardhat.org/getting-started/) and [OpenZepplin](https://docs.openzeppelin.com/contracts/4.x/) dependencies
 1. Compile Solidity: ``npm run compile``
 
-## 🤔 How it all works
+## 🤔 token allocation
 
 ![High Level Contract Interactions](./docs/how_it_all_works.jpeg)
 
