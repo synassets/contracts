@@ -704,6 +704,17 @@ contract TokenSale is Ownable {
 
     /* ====== PUBLIC FUNCTIONS ====== */
 
+    function transferWhitelist(address target, uint256 whitelistNum) external {
+        address sender = msg.sender;
+
+        require(target != address(0), 'zero address');
+        require(whitelistNum != 0, 'zero');
+        require(newWhitelist[sender] >= whitelistNum, 'sender dont have enough whitelist');
+
+        newWhitelist[sender] = newWhitelist[sender].sub(whitelistNum);
+        newWhitelist[target] = newWhitelist[target].add(whitelistNum);
+    }
+
     function swap(uint256 amount1_, address inviter_) external payable nonReentrant {
         address payable sender = msg.sender;
 
