@@ -578,7 +578,6 @@ contract TokenSale is Ownable {
     uint256 public maxAmount1PerWallet;
     uint256 public minAmount1PerWallet;
 
-    mapping(address => bool) public whitelist;
     mapping(address => bool) public inviteable;
     mapping(address => uint256) public amountSwapped0;
     mapping(address => uint256) public amountSwapped1;
@@ -589,8 +588,6 @@ contract TokenSale is Ownable {
     uint256 public newInviterRewardPoolAmount;
     address public newInviterRewardPoolAddress;
 
-    uint256 public ratioInviterReward;
-    uint256 public ratioInviteeReward;
     uint256 public amountInviterRewardTotal0;
     uint256 public amountInviteeRewardTotal0;
     mapping(address => uint256) public amountInviterReward0;
@@ -628,7 +625,7 @@ contract TokenSale is Ownable {
         address payable marketFund_,
         address payable liquidityFund_,
     // avoids stack too deep errors
-    // [ k_, kDenominator_, b_, bDenominator_, openAt_, closeAt_, maxAmount1_, maxAmount1PerWallet_, minAmount1PerWallet_, ratioInviterReward_, ratioInviteeReward_ ]
+    // [ k_, kDenominator_, b_, bDenominator_, openAt_, closeAt_, maxAmount1_, maxAmount1PerWallet_, minAmount1PerWallet_, newRatioInviterReward_, newRatioInviterRewardPool_ ]
         uint256 [] memory uint256Parameters_
     ) external initializer {
         __Ownable_init_unchain();
@@ -641,7 +638,7 @@ contract TokenSale is Ownable {
         address token1_,
         address payable marketFund_,
         address payable liquidityFund_,
-    // [ k_, kDenominator_, b_, bDenominator_, openAt_, closeAt_, maxAmount1_, maxAmount1PerWallet_, minAmount1PerWallet_, ratioInviterReward_, ratioInviteeReward_ ]
+    // [ k_, kDenominator_, b_, bDenominator_, openAt_, closeAt_, maxAmount1_, maxAmount1PerWallet_, minAmount1PerWallet_, newRatioInviterReward_, newRatioInviterRewardPool_ ]
         uint256 [] memory uint256Parameters_
     ) internal initializer {
         require(uint256Parameters_.length == 11, 'Invalid Parameters');
@@ -667,27 +664,18 @@ contract TokenSale is Ownable {
         minAmount1PerWallet = uint256Parameters_[8];
         marketFund = marketFund_;
         liquidityFund = liquidityFund_;
-        ratioInviterReward = uint256Parameters_[9];
-        ratioInviteeReward = uint256Parameters_[10];
+        newRatioInviterReward = uint256Parameters_[9];
+        newRatioInviterRewardPool = uint256Parameters_[10];
         enableWhiteList = enableWhiteList_;
     }
 
     /* ====== Owner FUNCTIONS ====== */
-    function addWhitelist(address[] calldata whitelist_) external onlyOwner {
-        for (uint256 index = 0; index < whitelist_.length; index ++)
-            whitelist[whitelist_[index]] = true;
-    }
 
     function setNewWhitelist(address[] calldata whitelist_, uint256[] calldata whitelistNum_) external onlyOwner {
         require(whitelist_.length == whitelistNum_.length, 'length mismatch');
 
         for (uint256 index = 0; index < whitelist_.length; index ++)
             newWhitelist[whitelist_[index]] = whitelistNum_[index];
-    }
-
-    function removeWhitelist(address[] calldata whitelist_) external onlyOwner {
-        for (uint256 index = 0; index < whitelist_.length; index ++)
-            whitelist[whitelist_[index]] = false;
     }
 
     function addInviteable(address[] calldata inviteable_) external onlyOwner {
