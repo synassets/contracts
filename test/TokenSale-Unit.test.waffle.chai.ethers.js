@@ -19,6 +19,7 @@ describe('TokenSale', () => {
         beneficiary,
         liquidity,
         proxyDeployer,
+        newInviterRewardPoolAddress,
         DAI,
         dai,
         SAT,
@@ -29,13 +30,12 @@ describe('TokenSale', () => {
         maxAmount1 = '600000000000000000000',
         maxAmount1PerWallet = '100000000000000000000',
         minAmount1PerWallet = '10000000000000000000',
-        ratioBeneficiary = '200000000000000000',
         ratioInviterReward = '40000000000000000',
         ratioInviteeReward = '10000000000000000',
         initialMint = '10000000000000000000000000';
 
     beforeEach(async function () {
-        [deployer, addr1, addr2, addr3, addr4, addr5, addr6, addr7, addr8, beneficiary, liquidity, proxyDeployer] = await ethers.getSigners();
+        [deployer, addr1, addr2, addr3, addr4, addr5, addr6, addr7, addr8, beneficiary, liquidity, proxyDeployer, newInviterRewardPoolAddress] = await ethers.getSigners();
 
         DAI = await ethers.getContractFactory('DAI');
         dai = await DAI.deploy( 0 );
@@ -61,7 +61,8 @@ describe('TokenSale', () => {
             dai.address,
             beneficiary.address,
             liquidity.address,
-            ['1','10000000000000000000000000','2000000000000000000','1000000000000000000',openAt,closeAt,maxAmount1,maxAmount1PerWallet,minAmount1PerWallet,ratioBeneficiary,ratioInviterReward,ratioInviteeReward]
+            newInviterRewardPoolAddress.address,
+            ['1','10000000000000000000000000','2000000000000000000','1000000000000000000',openAt,closeAt,maxAmount1,maxAmount1PerWallet,minAmount1PerWallet,ratioInviterReward,ratioInviteeReward]
 
             // ['1','10000000000000000000000000','2000000000000000000','1000000000000000000',openAt,closeAt,'100000000000000000000000','1000000000000000000000','1000000000000000000000','200000000000000000','40000000000000000','10000000000000000']
         );
@@ -87,7 +88,10 @@ describe('TokenSale', () => {
         await sat.setVault(tokenSale.address);
         await dai.mint(deployer.address, initialMint);
         await tokenSale.addInviteable([deployer.address, addr7.address]);
-        await tokenSale.addWhitelist([addr1.address, addr2.address, addr3.address, addr4.address, addr5.address, addr6.address]);
+        await tokenSale.setNewWhitelist(
+            [addr1.address, addr2.address, addr3.address, addr4.address, addr5.address, addr6.address],
+            [1, 1, 1, 1, 1, 1]
+        );
     });
 
     describe('swap()', () => {
@@ -109,12 +113,27 @@ describe('TokenSale', () => {
                 await dai.connect(swapper).approve(tokenSale.address, maxAmount1PerWallet);
                 await tokenSale.connect(swapper).swap(maxAmount1PerWallet, addr7.address);
 
-                expect(await sat.balanceOf(swapper.address)).to.be.equal(amount0 + amount0 / 100n);
+                expect(await sat.balanceOf(swapper.address)).to.be.equal(amount0);
                 expect(await sat.balanceOf(addr7.address)).to.be.equal(await tokenSale.amountInviterReward0(addr7.address));
             }
 
             expect(await tokenSale.amountTotal1()).to.be.equal(maxAmount1);
             expect(BigInt(await dai.balanceOf(liquidity.address)) + BigInt(await dai.balanceOf(beneficiary.address))).to.be.equal(BigInt(maxAmount1));
+        });
+
+        it('should transfer whitelist after swap', async () => {
+            await dai.transfer(addr1.address, maxAmount1PerWallet);
+            await dai.connect(addr1).approve(tokenSale.address, maxAmount1PerWallet);
+            await tokenSale.connect(addr1).swap(maxAmount1PerWallet, addr7.address);
+
+            await expect(tokenSale.connect(addr1).transferWhitelist(addr2.address, 1)).to.be.revertedWith('sender dont have enough whitelist');
+        });
+
+        it('should transfer whitelist', async () => {
+            await tokenSale.connect(addr1).transferWhitelist(addr2.address, 1);
+
+            expect(await tokenSale.newWhitelist(addr1.address)).to.be.equal('0');
+            expect(await tokenSale.newWhitelist(addr2.address)).to.be.equal('2');
         });
     });
 });
