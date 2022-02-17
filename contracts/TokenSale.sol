@@ -582,11 +582,11 @@ contract TokenSale is Ownable {
     mapping(address => uint256) public amountSwapped0;
     mapping(address => uint256) public amountSwapped1;
 
-    mapping(address => uint256) public newWhitelist;
-    uint256 public newRatioInviterReward;
-    uint256 public newRatioInviterRewardPool;
-    uint256 public newInviterRewardPoolAmount;
-    address public newInviterRewardPoolAddress;
+    mapping(address => uint256) public whitelist;
+    uint256 public ratioInviterReward;
+    uint256 public ratioInviterRewardPool;
+    uint256 public inviterRewardPoolAmount;
+    address public inviterRewardPoolAddress;
 
     uint256 public amountInviterRewardTotal0;
     uint256 public amountInviteeRewardTotal0;
@@ -667,9 +667,9 @@ contract TokenSale is Ownable {
         minAmount1PerWallet = uint256Parameters_[8];
         marketFund = marketFund_;
         liquidityFund = liquidityFund_;
-        newInviterRewardPoolAddress = newInviterRewardPoolAddress_;
-        newRatioInviterReward = uint256Parameters_[9];
-        newRatioInviterRewardPool = uint256Parameters_[10];
+        inviterRewardPoolAddress = newInviterRewardPoolAddress_;
+        ratioInviterReward = uint256Parameters_[9];
+        ratioInviterRewardPool = uint256Parameters_[10];
         enableWhiteList = enableWhiteList_;
     }
 
@@ -679,8 +679,8 @@ contract TokenSale is Ownable {
         require(whitelist_.length == whitelistNum_.length, 'length mismatch');
 
         for (uint256 index = 0; index < whitelist_.length; index ++) {
-            uint256 num = newWhitelist[whitelist_[index]];
-            newWhitelist[whitelist_[index]] = whitelistNum_[index];
+            uint256 num = whitelist[whitelist_[index]];
+            whitelist[whitelist_[index]] = whitelistNum_[index];
 
             if (num < whitelistNum_[index])
                 emit WhitelistTransfer(address(0), whitelist_[index], whitelistNum_[index] - num);
@@ -692,7 +692,7 @@ contract TokenSale is Ownable {
     function addInviteable(address[] calldata inviteable_) external onlyOwner {
         for (uint256 index = 0; index < inviteable_.length; index ++) {
             inviteable[inviteable_[index]] = true;
-            newWhitelist[inviteable_[index]] = 1;
+            whitelist[inviteable_[index]] = 1;
             emit WhitelistTransfer(address(0), inviteable_[index], 1);
         }
     }
@@ -709,10 +709,10 @@ contract TokenSale is Ownable {
 
         require(target != address(0), 'zero address');
         require(whitelistNum != 0, 'zero');
-        require(newWhitelist[sender] >= whitelistNum, 'sender dont have enough whitelist');
+        require(whitelist[sender] >= whitelistNum, 'sender dont have enough whitelist');
 
-        newWhitelist[sender] = newWhitelist[sender].sub(whitelistNum);
-        newWhitelist[target] = newWhitelist[target].add(whitelistNum);
+        whitelist[sender] = whitelist[sender].sub(whitelistNum);
+        whitelist[target] = whitelist[target].add(whitelistNum);
 
         emit WhitelistTransfer(sender, target, whitelistNum);
     }
@@ -730,7 +730,7 @@ contract TokenSale is Ownable {
         require(tx.origin == sender, 'disallow contract caller');
         if (enableWhiteList) {
             require(
-                newWhitelist[sender] > 0 || amountSwapped1[sender] > 0, 'sender not on whitelist'
+                whitelist[sender] > 0 || amountSwapped1[sender] > 0, 'sender not on whitelist'
             );
         }
 
@@ -756,7 +756,7 @@ contract TokenSale is Ownable {
         amountTotal0 = amountTotal0.add(amount0_);
         amountTotal1 = amountTotal1.add(amount1_);
         if (amountSwapped1[sender] == 0) {
-            newWhitelist[sender] = newWhitelist[sender].sub(1);
+            whitelist[sender] = whitelist[sender].sub(1);
             emit WhitelistTransfer(sender, address(0x000000000000000000000000000000000000dEaD), 1);
         }
         amountSwapped0[sender] = amountSwapped0[sender].add(amount0_);
@@ -773,15 +773,15 @@ contract TokenSale is Ownable {
         }
 
         if (!inviteable[sender]) {
-            uint256 inviterRewardAmount_ = amount0_.mul(newRatioInviterReward).div(1 ether);
-            uint256 inviterRewardPoolAmount_ = amount0_.mul(newRatioInviterRewardPool).div(1 ether);
+            uint256 inviterRewardAmount_ = amount0_.mul(ratioInviterReward).div(1 ether);
+            uint256 inviterRewardPoolAmount_ = amount0_.mul(ratioInviterRewardPool).div(1 ether);
             // update storage
             amountInviterReward0[inviter_] = amountInviterReward0[inviter_].add(inviterRewardAmount_);
-            newInviterRewardPoolAmount = newInviterRewardPoolAmount.add(inviterRewardPoolAmount_);
+            inviterRewardPoolAmount = inviterRewardPoolAmount.add(inviterRewardPoolAmount_);
             amountInviterRewardTotal0 = amountInviterRewardTotal0.add(inviterRewardAmount_);
 
             IERC20Mintable(token0).mint(inviter_, inviterRewardAmount_);
-            IERC20Mintable(token0).mint(newInviterRewardPoolAddress, inviterRewardPoolAmount_);
+            IERC20Mintable(token0).mint(inviterRewardPoolAddress, inviterRewardPoolAmount_);
         }
 
         emit Swapped(sender, inviter_, amount0_, amount1_);
