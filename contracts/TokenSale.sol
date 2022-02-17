@@ -675,7 +675,7 @@ contract TokenSale is Ownable {
 
     /* ====== Owner FUNCTIONS ====== */
 
-    function setNewWhitelist(address[] calldata whitelist_, uint256[] calldata whitelistNum_) external onlyOwner {
+    function setWhitelist(address[] calldata whitelist_, uint256[] calldata whitelistNum_) external onlyOwner {
         require(whitelist_.length == whitelistNum_.length, 'length mismatch');
 
         for (uint256 index = 0; index < whitelist_.length; index ++) {
