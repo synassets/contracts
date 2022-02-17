@@ -625,12 +625,13 @@ contract TokenSale is Ownable {
         address token1_,
         address payable marketFund_,
         address payable liquidityFund_,
+        address newInviterRewardPoolAddress_,
     // avoids stack too deep errors
     // [ k_, kDenominator_, b_, bDenominator_, openAt_, closeAt_, maxAmount1_, maxAmount1PerWallet_, minAmount1PerWallet_, newRatioInviterReward_, newRatioInviterRewardPool_ ]
         uint256 [] memory uint256Parameters_
     ) external initializer {
         __Ownable_init_unchain();
-        __TokenSale_init_unchain(enableWhiteList_, token0_, token1_, marketFund_, liquidityFund_, uint256Parameters_);
+        __TokenSale_init_unchain(enableWhiteList_, token0_, token1_, marketFund_, liquidityFund_, newInviterRewardPoolAddress_, uint256Parameters_);
     }
 
     function __TokenSale_init_unchain (
@@ -639,6 +640,7 @@ contract TokenSale is Ownable {
         address token1_,
         address payable marketFund_,
         address payable liquidityFund_,
+        address newInviterRewardPoolAddress_,
     // [ k_, kDenominator_, b_, bDenominator_, openAt_, closeAt_, maxAmount1_, maxAmount1PerWallet_, minAmount1PerWallet_, newRatioInviterReward_, newRatioInviterRewardPool_ ]
         uint256 [] memory uint256Parameters_
     ) internal initializer {
@@ -665,6 +667,7 @@ contract TokenSale is Ownable {
         minAmount1PerWallet = uint256Parameters_[8];
         marketFund = marketFund_;
         liquidityFund = liquidityFund_;
+        newInviterRewardPoolAddress = newInviterRewardPoolAddress_;
         newRatioInviterReward = uint256Parameters_[9];
         newRatioInviterRewardPool = uint256Parameters_[10];
         enableWhiteList = enableWhiteList_;
