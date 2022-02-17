@@ -606,6 +606,7 @@ contract TokenSale is Ownable {
     /* ====== Event ====== */
 
     event Swapped(address indexed sender, address indexed inviter, uint256 amount0, uint256 amount1);
+    event WhitelistTransfer(address indexed from, address indexed to, uint256 amount);
 
     /* ====== Modifier ====== */
     modifier nonReentrant {
@@ -674,14 +675,22 @@ contract TokenSale is Ownable {
     function setNewWhitelist(address[] calldata whitelist_, uint256[] calldata whitelistNum_) external onlyOwner {
         require(whitelist_.length == whitelistNum_.length, 'length mismatch');
 
-        for (uint256 index = 0; index < whitelist_.length; index ++)
+        for (uint256 index = 0; index < whitelist_.length; index ++) {
+            uint256 num = newWhitelist[whitelist_[index]];
             newWhitelist[whitelist_[index]] = whitelistNum_[index];
+
+            if (num < whitelistNum_[index])
+                emit WhitelistTransfer(address(0), whitelist_[index], whitelistNum_[index] - num);
+            if (num > whitelistNum_[index])
+                emit WhitelistTransfer(whitelist_[index], address(0), num - whitelistNum_[index]);
+        }
     }
 
     function addInviteable(address[] calldata inviteable_) external onlyOwner {
         for (uint256 index = 0; index < inviteable_.length; index ++) {
             inviteable[inviteable_[index]] = true;
             newWhitelist[inviteable_[index]] = 1;
+            emit WhitelistTransfer(address(0), inviteable_[index], 1);
         }
     }
 
@@ -701,6 +710,8 @@ contract TokenSale is Ownable {
 
         newWhitelist[sender] = newWhitelist[sender].sub(whitelistNum);
         newWhitelist[target] = newWhitelist[target].add(whitelistNum);
+
+        emit WhitelistTransfer(sender, target, whitelistNum);
     }
 
     function swap(uint256 amount1_, address inviter_) external payable nonReentrant {
@@ -741,8 +752,10 @@ contract TokenSale is Ownable {
         t0 = t0.add(amount0_);
         amountTotal0 = amountTotal0.add(amount0_);
         amountTotal1 = amountTotal1.add(amount1_);
-        if (amountSwapped1[sender] == 0)
+        if (amountSwapped1[sender] == 0) {
             newWhitelist[sender] = newWhitelist[sender].sub(1);
+            emit WhitelistTransfer(sender, address(0x000000000000000000000000000000000000dEaD), 1);
+        }
         amountSwapped0[sender] = amountSwapped0[sender].add(amount0_);
         amountSwapped1[sender] = amountSwapped1[sender].add(amount1_);
 
