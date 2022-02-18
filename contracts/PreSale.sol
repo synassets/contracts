@@ -495,6 +495,7 @@ contract PreSale is Governable {
         uint quota;
         uint offered;
         uint claimed;
+        uint whitelistNum;
     }
 
     // view function
@@ -508,6 +509,10 @@ contract PreSale is Governable {
 
     function claimedOf(address account) external view returns (uint) {
         return saleInfos[account].claimed;
+    }
+
+    function whitelistOf(address account) external view returns (uint) {
+        return saleInfos[account].whitelistNum;
     }
 
 	function __PreSale_init(
@@ -581,6 +586,34 @@ contract PreSale is Governable {
             setQuota(addrs[i], amounts[i]);
     }
 
+    function setWhitelist(address[] calldata whitelist_, uint256[] calldata whitelistNum_) external governance {
+        require(whitelist_.length == whitelistNum_.length, 'length mismatch');
+
+        for (uint256 index = 0; index < whitelist_.length; index ++) {
+            uint256 num = saleInfos[whitelist_[index]].whitelistNum;
+            saleInfos[whitelist_[index]].whitelistNum = whitelistNum_[index];
+
+            if (num < whitelistNum_[index])
+                emit WhitelistTransfer(address(0), whitelist_[index], whitelistNum_[index] - num);
+            if (num > whitelistNum_[index])
+                emit WhitelistTransfer(whitelist_[index], address(0), num - whitelistNum_[index]);
+        }
+    }
+
+    function transferWhitelist(address target, uint256 whitelistNum) external {
+        address sender = msg.sender;
+
+        require(target != address(0), 'zero address');
+        require(whitelistNum != 0, 'zero');
+        require(saleInfos[sender].whitelistNum >= whitelistNum, 'sender dont have enough whitelist');
+
+        saleInfos[sender].whitelistNum = whitelist[sender].sub(whitelistNum);
+        saleInfos[target].whitelistNum = whitelist[target].add(whitelistNum);
+
+        emit WhitelistTransfer(sender, target, whitelistNum);
+    }
+    event WhitelistTransfer(address indexed from, address indexed to, uint256 amount);
+
 	function offer(uint amount) external {
 		require(address(currency) != address(0), 'should call offerETH() instead');
         require(tx.origin == msg.sender, 'disallow contract caller');
@@ -588,7 +621,16 @@ contract PreSale is Governable {
 		require(block.timestamp >= timeOfferBegin, "it's not time yet");
 		require(block.timestamp < timeOfferEnd, "expired");
 
-		amount = enableWhiteList ? saleInfos[msg.sender].quota : saleInfos[address(this)].quota;
+        if (enableWhiteList) {
+            require(saleInfos[msg.sender].whitelistNum > 0, 'sender not on whitelist');
+            saleInfos[msg.sender].whitelistNum--;
+            emit WhitelistTransfer(sender, address(0x000000000000000000000000000000000000dEaD), 1);
+
+            amount = saleInfos[msg.sender].quota;
+        } else {
+            amount = saleInfos[address(this)].quota;
+        }
+		// amount = enableWhiteList ? saleInfos[msg.sender].quota : saleInfos[address(this)].quota;
 		require(amount > 0, 'no quota');
 		require(currency.allowance(msg.sender, address(this)) >= amount, 'allowance not enough');
 		require(currency.balanceOf(msg.sender) >= amount, 'balance not enough');
@@ -610,7 +652,17 @@ contract PreSale is Governable {
 		require(block.timestamp >= timeOfferBegin, "it's not time yet");
         require(block.timestamp < timeOfferEnd, "expired");
 
-        uint amount = enableWhiteList ? saleInfos[msg.sender].quota : saleInfos[address(this)].quota;
+        uint amount;
+        if (enableWhiteList) {
+            require(saleInfos[msg.sender].whitelistNum > 0, 'sender not on whitelist');
+            saleInfos[msg.sender].whitelistNum--;
+            emit WhitelistTransfer(sender, address(0x000000000000000000000000000000000000dEaD), 1);
+
+            amount = saleInfos[msg.sender].quota;
+        } else {
+            amount = saleInfos[address(this)].quota;
+        }
+        // uint amount = enableWhiteList ? saleInfos[msg.sender].quota : saleInfos[address(this)].quota;
 		require(amount > 0, 'no quota');
         require(msg.value >= amount, 'transfer amount not enough');
 		require(saleInfos[msg.sender].offered == 0, 'offered already');
