@@ -486,9 +486,6 @@ contract PreSale is Governable {
 	uint public totalQuota;
 	uint public totalOffered;
 	uint public totalClaimed;
-	mapping (address => uint) public quotaOf;
-	mapping (address => uint) public offeredOf;
-	mapping (address => uint) public claimedOf;
 
     mapping (address => SaleInfo) public saleInfos;
 
