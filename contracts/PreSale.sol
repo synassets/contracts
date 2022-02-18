@@ -500,6 +500,19 @@ contract PreSale is Governable {
         uint claimed;
     }
 
+    // view function
+    function quotaOf(address account) external view returns (uint) {
+        return saleInfos[account].quota;
+    }
+
+    function offeredOf(address account) external view returns (uint) {
+        return saleInfos[account].offered;
+    }
+
+    function claimedOf(address account) external view returns (uint) {
+        return saleInfos[account].claimed;
+    }
+
 	function __PreSale_init(
         address governor_,
         address currency_,
