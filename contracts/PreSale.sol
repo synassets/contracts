@@ -490,7 +490,15 @@ contract PreSale is Governable {
 	mapping (address => uint) public offeredOf;
 	mapping (address => uint) public claimedOf;
 
+    mapping (address => SaleInfo) public saleInfos;
+
     bool public enableWhiteList;
+
+    struct SaleInfo {
+        uint quota;
+        uint offered;
+        uint claimed;
+    }
 
 	function __PreSale_init(
         address governor_,
@@ -547,8 +555,8 @@ contract PreSale is Governable {
 	}
 
     function setQuota(address addr, uint amount) public governance {
-        totalQuota = totalQuota.add(amount).sub(quotaOf[addr]);
-        quotaOf[addr] = amount;
+        totalQuota = totalQuota.add(amount).sub(saleInfos[addr].quota);
+        saleInfos[addr].quota = amount;
         emit Quota(addr, amount, totalQuota);
     }
     event Quota(address indexed addr, uint amount, uint total);
@@ -570,15 +578,15 @@ contract PreSale is Governable {
 		require(block.timestamp >= timeOfferBegin, "it's not time yet");
 		require(block.timestamp < timeOfferEnd, "expired");
 
-		amount = enableWhiteList ? quotaOf[msg.sender] : quotaOf[address(this)];
+		amount = enableWhiteList ? saleInfos[msg.sender].quota : saleInfos[address(this)].quota;
 		require(amount > 0, 'no quota');
 		require(currency.allowance(msg.sender, address(this)) >= amount, 'allowance not enough');
 		require(currency.balanceOf(msg.sender) >= amount, 'balance not enough');
-		require(offeredOf[msg.sender] == 0, 'offered already');
+		require(saleInfos[msg.sender].offered == 0, 'offered already');
 
 		currency.safeTransferFrom(msg.sender, recipient, amount);
 		uint volume = amount.mul(ratio).div(1e18);
-		offeredOf[msg.sender] = volume;
+        saleInfos[msg.sender].offered = volume;
 		totalOffered = totalOffered.add(volume);
 		require(totalOffered <= token.balanceOf(address(this)), 'Quota is full');
 		emit Offer(msg.sender, amount, volume, totalOffered);
@@ -592,14 +600,14 @@ contract PreSale is Governable {
 		require(block.timestamp >= timeOfferBegin, "it's not time yet");
         require(block.timestamp < timeOfferEnd, "expired");
 
-        uint amount = enableWhiteList ? quotaOf[msg.sender] : quotaOf[address(this)];
+        uint amount = enableWhiteList ? saleInfos[msg.sender].quota : saleInfos[address(this)].quota;
 		require(amount > 0, 'no quota');
         require(msg.value >= amount, 'transfer amount not enough');
-		require(offeredOf[msg.sender] == 0, 'offered already');
+		require(saleInfos[msg.sender].offered == 0, 'offered already');
 
 		recipient.transfer(amount);
 		uint volume = amount.mul(ratio).div(1e18);
-		offeredOf[msg.sender] = volume;
+		saleInfos[msg.sender].offered = volume;
 		totalOffered = totalOffered.add(volume);
 		require(totalOffered <= token.balanceOf(address(this)), 'Quota is full');
 		if(msg.value > amount)
@@ -610,12 +618,12 @@ contract PreSale is Governable {
     function claimable(address _account) public view returns (uint amount_) {
         amount_ = 0;
         if (block.timestamp > timeClaimFirst) {
-            uint _volume = offeredOf[_account];
+            uint _volume = saleInfos[_account].offered;
             amount_ = _volume.mul(ratioUnlockFirst).div(1 ether);
             if (block.timestamp >= timeUnlockEnd) amount_ = _volume;
             else if (block.timestamp > timeUnlockBegin) amount_ = _volume.sub(amount_).mul(block.timestamp.sub(timeUnlockBegin)).div(timeUnlockEnd.sub(timeUnlockBegin)).add(amount_);
 
-            amount_ = amount_.sub(claimedOf[_account]);
+            amount_ = amount_.sub(saleInfos[_account].claimed);
         }
     }
 
@@ -625,10 +633,10 @@ contract PreSale is Governable {
         uint _volume = claimable(msg.sender);
         require(_volume > 0, 'claimed already');
 
-        uint _claimed = _volume.add(claimedOf[msg.sender]);
-        require(_claimed <= offeredOf[msg.sender], 'exceeded offered');
+        uint _claimed = _volume.add(saleInfos[msg.sender].claimed);
+        require(_claimed <= saleInfos[msg.sender].offered, 'exceeded offered');
 
-        claimedOf[msg.sender] = _claimed;
+        saleInfos[msg.sender].claimed = _claimed;
         totalClaimed = _volume.add(totalClaimed);
 
         token.safeTransfer(msg.sender, _volume);
