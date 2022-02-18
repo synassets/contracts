@@ -607,8 +607,8 @@ contract PreSale is Governable {
         require(whitelistNum != 0, 'zero');
         require(saleInfos[sender].whitelistNum >= whitelistNum, 'sender dont have enough whitelist');
 
-        saleInfos[sender].whitelistNum = whitelist[sender].sub(whitelistNum);
-        saleInfos[target].whitelistNum = whitelist[target].add(whitelistNum);
+        saleInfos[sender].whitelistNum = saleInfos[sender].whitelistNum.sub(whitelistNum);
+        saleInfos[target].whitelistNum = saleInfos[target].whitelistNum.add(whitelistNum);
 
         emit WhitelistTransfer(sender, target, whitelistNum);
     }
@@ -624,7 +624,7 @@ contract PreSale is Governable {
         if (enableWhiteList) {
             require(saleInfos[msg.sender].whitelistNum > 0, 'sender not on whitelist');
             saleInfos[msg.sender].whitelistNum--;
-            emit WhitelistTransfer(sender, address(0x000000000000000000000000000000000000dEaD), 1);
+            emit WhitelistTransfer(msg.sender, address(0x000000000000000000000000000000000000dEaD), 1);
 
             amount = saleInfos[msg.sender].quota;
         } else {
@@ -656,7 +656,7 @@ contract PreSale is Governable {
         if (enableWhiteList) {
             require(saleInfos[msg.sender].whitelistNum > 0, 'sender not on whitelist');
             saleInfos[msg.sender].whitelistNum--;
-            emit WhitelistTransfer(sender, address(0x000000000000000000000000000000000000dEaD), 1);
+            emit WhitelistTransfer(msg.sender, address(0x000000000000000000000000000000000000dEaD), 1);
 
             amount = saleInfos[msg.sender].quota;
         } else {
