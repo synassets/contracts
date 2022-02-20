@@ -559,6 +559,8 @@ contract SATTimelock is Ownable {
     using LowGasSafeMath for uint256;
     using SafeERC20 for IERC20;
 
+    address public constant BLACK_HOLE = address(0x000000000000000000000000000000000000dEaD);
+
     address public token;
     address public claimAddress;
     uint256 public duration;
@@ -630,7 +632,8 @@ contract SATTimelock is Ownable {
             timeLeft_ = timeUnlockEnd.sub(block.timestamp);
             rewardLeft_ = reward.mul(timeLeft_).div(timeUnlockEnd.sub(timeUnlockBegin));
         }
-        timeLeft_ = rewardLeft_.mul(timeLeft_).add(amount_.mul(duration)).div(rewardLeft_.add(amount_));
+        // avoid div 0
+        timeLeft_ = (rewardLeft_ > 0 || amount_ > 0) ? rewardLeft_.mul(timeLeft_).add(amount_.mul(duration)).div(rewardLeft_.add(amount_)) : 0;
 
         timeUnlockBegin = block.timestamp;
         timeUnlockEnd = block.timestamp.add(timeLeft_);
@@ -641,6 +644,26 @@ contract SATTimelock is Ownable {
 
     function setClaimAddressPending(address claimAddress_) external onlyOwner {
         _claimAddressPending = claimAddress_;
+    }
+
+    function burn(uint256 amount_) external onlyOwner {
+        increaseReward();
+
+        uint256 balance_ = IERC20(token).balanceOf(address(this));
+        uint256 burnAmount_ = amount_ > balance_ ? balance_ : amount_;
+        uint256 left_ = 0;
+        uint256 reward_ = reward;
+        if (burnAmount_ > reward_) {
+            reward = 0;
+            left_ = burnAmount_ - reward_;
+        } else {
+            reward = reward_ - burnAmount_;
+        }
+        uint256 rewardUnlocked_ = rewardUnlocked;
+        rewardUnlocked = rewardUnlocked_ >= left_ ? (rewardUnlocked_ - left_) : 0;
+
+        IERC20(token).transfer(BLACK_HOLE, burnAmount_);
+        reserveToken = balance_ - burnAmount_;
     }
 
     function acceptClaimAddress() external {

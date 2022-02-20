@@ -486,11 +486,34 @@ contract PreSale is Governable {
 	uint public totalQuota;
 	uint public totalOffered;
 	uint public totalClaimed;
-	mapping (address => uint) public quotaOf;
-	mapping (address => uint) public offeredOf;
-	mapping (address => uint) public claimedOf;
+
+    mapping (address => SaleInfo) public saleInfos;
 
     bool public enableWhiteList;
+
+    struct SaleInfo {
+        uint quota;
+        uint offered;
+        uint claimed;
+        uint whitelistNum;
+    }
+
+    // view function
+    function quotaOf(address account) external view returns (uint) {
+        return saleInfos[account].quota;
+    }
+
+    function offeredOf(address account) external view returns (uint) {
+        return saleInfos[account].offered;
+    }
+
+    function claimedOf(address account) external view returns (uint) {
+        return saleInfos[account].claimed;
+    }
+
+    function whitelistOf(address account) external view returns (uint) {
+        return saleInfos[account].whitelistNum;
+    }
 
 	function __PreSale_init(
         address governor_,
@@ -547,8 +570,8 @@ contract PreSale is Governable {
 	}
 
     function setQuota(address addr, uint amount) public governance {
-        totalQuota = totalQuota.add(amount).sub(quotaOf[addr]);
-        quotaOf[addr] = amount;
+        totalQuota = totalQuota.add(amount).sub(saleInfos[addr].quota);
+        saleInfos[addr].quota = amount;
         emit Quota(addr, amount, totalQuota);
     }
     event Quota(address indexed addr, uint amount, uint total);
@@ -563,6 +586,34 @@ contract PreSale is Governable {
             setQuota(addrs[i], amounts[i]);
     }
 
+    function setWhitelist(address[] calldata whitelist_, uint256[] calldata whitelistNum_) external governance {
+        require(whitelist_.length == whitelistNum_.length, 'length mismatch');
+
+        for (uint256 index = 0; index < whitelist_.length; index ++) {
+            uint256 num = saleInfos[whitelist_[index]].whitelistNum;
+            saleInfos[whitelist_[index]].whitelistNum = whitelistNum_[index];
+
+            if (num < whitelistNum_[index])
+                emit WhitelistTransfer(address(0), whitelist_[index], whitelistNum_[index] - num);
+            if (num > whitelistNum_[index])
+                emit WhitelistTransfer(whitelist_[index], address(0), num - whitelistNum_[index]);
+        }
+    }
+
+    function transferWhitelist(address target, uint256 whitelistNum) external {
+        address sender = msg.sender;
+
+        require(target != address(0), 'zero address');
+        require(whitelistNum != 0, 'zero');
+        require(saleInfos[sender].whitelistNum >= whitelistNum, 'sender dont have enough whitelist');
+
+        saleInfos[sender].whitelistNum = saleInfos[sender].whitelistNum.sub(whitelistNum);
+        saleInfos[target].whitelistNum = saleInfos[target].whitelistNum.add(whitelistNum);
+
+        emit WhitelistTransfer(sender, target, whitelistNum);
+    }
+    event WhitelistTransfer(address indexed from, address indexed to, uint256 amount);
+
 	function offer(uint amount) external {
 		require(address(currency) != address(0), 'should call offerETH() instead');
         require(tx.origin == msg.sender, 'disallow contract caller');
@@ -570,15 +621,24 @@ contract PreSale is Governable {
 		require(block.timestamp >= timeOfferBegin, "it's not time yet");
 		require(block.timestamp < timeOfferEnd, "expired");
 
-		amount = enableWhiteList ? quotaOf[msg.sender] : quotaOf[address(this)];
+        if (enableWhiteList) {
+            require(saleInfos[msg.sender].whitelistNum > 0, 'sender not on whitelist');
+            saleInfos[msg.sender].whitelistNum--;
+            emit WhitelistTransfer(msg.sender, address(0x000000000000000000000000000000000000dEaD), 1);
+
+            amount = saleInfos[msg.sender].quota;
+        } else {
+            amount = saleInfos[address(this)].quota;
+        }
+		// amount = enableWhiteList ? saleInfos[msg.sender].quota : saleInfos[address(this)].quota;
 		require(amount > 0, 'no quota');
 		require(currency.allowance(msg.sender, address(this)) >= amount, 'allowance not enough');
 		require(currency.balanceOf(msg.sender) >= amount, 'balance not enough');
-		require(offeredOf[msg.sender] == 0, 'offered already');
+		require(saleInfos[msg.sender].offered == 0, 'offered already');
 
 		currency.safeTransferFrom(msg.sender, recipient, amount);
 		uint volume = amount.mul(ratio).div(1e18);
-		offeredOf[msg.sender] = volume;
+        saleInfos[msg.sender].offered = volume;
 		totalOffered = totalOffered.add(volume);
 		require(totalOffered <= token.balanceOf(address(this)), 'Quota is full');
 		emit Offer(msg.sender, amount, volume, totalOffered);
@@ -592,14 +652,24 @@ contract PreSale is Governable {
 		require(block.timestamp >= timeOfferBegin, "it's not time yet");
         require(block.timestamp < timeOfferEnd, "expired");
 
-        uint amount = enableWhiteList ? quotaOf[msg.sender] : quotaOf[address(this)];
+        uint amount;
+        if (enableWhiteList) {
+            require(saleInfos[msg.sender].whitelistNum > 0, 'sender not on whitelist');
+            saleInfos[msg.sender].whitelistNum--;
+            emit WhitelistTransfer(msg.sender, address(0x000000000000000000000000000000000000dEaD), 1);
+
+            amount = saleInfos[msg.sender].quota;
+        } else {
+            amount = saleInfos[address(this)].quota;
+        }
+        // uint amount = enableWhiteList ? saleInfos[msg.sender].quota : saleInfos[address(this)].quota;
 		require(amount > 0, 'no quota');
         require(msg.value >= amount, 'transfer amount not enough');
-		require(offeredOf[msg.sender] == 0, 'offered already');
+		require(saleInfos[msg.sender].offered == 0, 'offered already');
 
 		recipient.transfer(amount);
 		uint volume = amount.mul(ratio).div(1e18);
-		offeredOf[msg.sender] = volume;
+		saleInfos[msg.sender].offered = volume;
 		totalOffered = totalOffered.add(volume);
 		require(totalOffered <= token.balanceOf(address(this)), 'Quota is full');
 		if(msg.value > amount)
@@ -610,12 +680,12 @@ contract PreSale is Governable {
     function claimable(address _account) public view returns (uint amount_) {
         amount_ = 0;
         if (block.timestamp > timeClaimFirst) {
-            uint _volume = offeredOf[_account];
+            uint _volume = saleInfos[_account].offered;
             amount_ = _volume.mul(ratioUnlockFirst).div(1 ether);
             if (block.timestamp >= timeUnlockEnd) amount_ = _volume;
             else if (block.timestamp > timeUnlockBegin) amount_ = _volume.sub(amount_).mul(block.timestamp.sub(timeUnlockBegin)).div(timeUnlockEnd.sub(timeUnlockBegin)).add(amount_);
 
-            amount_ = amount_.sub(claimedOf[_account]);
+            amount_ = amount_.sub(saleInfos[_account].claimed);
         }
     }
 
@@ -625,10 +695,10 @@ contract PreSale is Governable {
         uint _volume = claimable(msg.sender);
         require(_volume > 0, 'claimed already');
 
-        uint _claimed = _volume.add(claimedOf[msg.sender]);
-        require(_claimed <= offeredOf[msg.sender], 'exceeded offered');
+        uint _claimed = _volume.add(saleInfos[msg.sender].claimed);
+        require(_claimed <= saleInfos[msg.sender].offered, 'exceeded offered');
 
-        claimedOf[msg.sender] = _claimed;
+        saleInfos[msg.sender].claimed = _claimed;
         totalClaimed = _volume.add(totalClaimed);
 
         token.safeTransfer(msg.sender, _volume);
