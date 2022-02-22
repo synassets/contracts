@@ -692,8 +692,10 @@ contract TokenSale is Ownable {
     function addInviteable(address[] calldata inviteable_) external onlyOwner {
         for (uint256 index = 0; index < inviteable_.length; index ++) {
             inviteable[inviteable_[index]] = true;
-            whitelist[inviteable_[index]] = 1;
-            emit WhitelistTransfer(address(0), inviteable_[index], 1);
+            if (whitelist[inviteable_[index]] == 0) {
+                whitelist[inviteable_[index]] = 1;
+                emit WhitelistTransfer(address(0), inviteable_[index], 1);
+            }
         }
     }
 
