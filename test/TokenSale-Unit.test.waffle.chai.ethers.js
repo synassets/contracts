@@ -28,7 +28,7 @@ describe('TokenSale', () => {
         tokenSale,
 
         maxAmount1 = '600000000000000000000',
-        maxAmount1PerWallet = '100000000000000000000',
+        maxAmount1PerWallet = '10000000000',
         minAmount1PerWallet = '10000000000000000000',
         ratioInviterReward = '40000000000000000',
         ratioInviteeReward = '10000000000000000',
@@ -56,13 +56,13 @@ describe('TokenSale', () => {
         const closeAt = (BigInt(new Date().getTime()) / 1000n + 3600n).toString();
 
         await tokenSale.__TokenSale_initialize(
-            true,
+            false,
             sat.address,
             dai.address,
             beneficiary.address,
             liquidity.address,
             newInviterRewardPoolAddress.address,
-            ['1','10000000000000000000000000','2000000000000000000','1000000000000000000',openAt,closeAt,maxAmount1,maxAmount1PerWallet,minAmount1PerWallet,ratioInviterReward,ratioInviteeReward]
+            ["15","363636300000000000000000000000000000000","20","100000000000000",openAt,closeAt,"1000000000000","10000000000","500000000","25000000000000000","15000000000000000"]
 
             // ['1','10000000000000000000000000','2000000000000000000','1000000000000000000',openAt,closeAt,'100000000000000000000000','1000000000000000000000','1000000000000000000000','200000000000000000','40000000000000000','10000000000000000']
         );
@@ -88,7 +88,7 @@ describe('TokenSale', () => {
         await sat.setVault(tokenSale.address);
         await dai.mint(deployer.address, initialMint);
         await tokenSale.addInviteable([deployer.address, addr7.address]);
-        await tokenSale.setNewWhitelist(
+        await tokenSale.setWhitelist(
             [addr1.address, addr2.address, addr3.address, addr4.address, addr5.address, addr6.address],
             [1, 1, 1, 1, 1, 1]
         );
@@ -132,8 +132,8 @@ describe('TokenSale', () => {
         it('should transfer whitelist', async () => {
             await tokenSale.connect(addr1).transferWhitelist(addr2.address, 1);
 
-            expect(await tokenSale.newWhitelist(addr1.address)).to.be.equal('0');
-            expect(await tokenSale.newWhitelist(addr2.address)).to.be.equal('2');
+            expect(await tokenSale.whitelist(addr1.address)).to.be.equal('0');
+            expect(await tokenSale.whitelist(addr2.address)).to.be.equal('2');
         });
     });
 });
