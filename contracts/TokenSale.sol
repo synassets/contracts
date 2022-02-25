@@ -757,7 +757,7 @@ contract TokenSale is Ownable {
         t0 = t0.add(amount0_);
         amountTotal0 = amountTotal0.add(amount0_);
         amountTotal1 = amountTotal1.add(amount1_);
-        if (amountSwapped1[sender] == 0) {
+        if (enableWhiteList && amountSwapped1[sender] == 0) {
             whitelist[sender] = whitelist[sender].sub(1);
             emit WhitelistTransfer(sender, address(0x000000000000000000000000000000000000dEaD), 1);
         }
