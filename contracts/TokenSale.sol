@@ -584,6 +584,7 @@ contract TokenSale is Ownable {
 
     mapping(address => uint256) public whitelist;
     uint256 public ratioInviterReward;
+    uint256 public ratioInviteeReward;
     uint256 public ratioInviterRewardPool;
     uint256 public inviterRewardPoolAmount;
     address public inviterRewardPoolAddress;
@@ -627,7 +628,7 @@ contract TokenSale is Ownable {
         address payable liquidityFund_,
         address newInviterRewardPoolAddress_,
     // avoids stack too deep errors
-    // [ k_, kDenominator_, b_, bDenominator_, openAt_, closeAt_, maxAmount1_, maxAmount1PerWallet_, minAmount1PerWallet_, newRatioInviterReward_, newRatioInviterRewardPool_ ]
+    // [ k_, kDenominator_, b_, bDenominator_, openAt_, closeAt_, maxAmount1_, maxAmount1PerWallet_, minAmount1PerWallet_, newRatioInviterReward_, ratioInviteeReward_, newRatioInviterRewardPool_ ]
         uint256 [] memory uint256Parameters_
     ) external initializer {
         __Ownable_init_unchain();
@@ -641,10 +642,10 @@ contract TokenSale is Ownable {
         address payable marketFund_,
         address payable liquidityFund_,
         address newInviterRewardPoolAddress_,
-    // [ k_, kDenominator_, b_, bDenominator_, openAt_, closeAt_, maxAmount1_, maxAmount1PerWallet_, minAmount1PerWallet_, newRatioInviterReward_, newRatioInviterRewardPool_ ]
+    // [ k_, kDenominator_, b_, bDenominator_, openAt_, closeAt_, maxAmount1_, maxAmount1PerWallet_, minAmount1PerWallet_, newRatioInviterReward_, ratioInviteeReward_, newRatioInviterRewardPool_ ]
         uint256 [] memory uint256Parameters_
     ) internal initializer {
-        require(uint256Parameters_.length == 11, 'Invalid Parameters');
+        require(uint256Parameters_.length == 12, 'Invalid Parameters');
 
         k = uint256Parameters_[0];
         require(uint256Parameters_[1] != 0);
@@ -669,7 +670,8 @@ contract TokenSale is Ownable {
         liquidityFund = liquidityFund_;
         inviterRewardPoolAddress = newInviterRewardPoolAddress_;
         ratioInviterReward = uint256Parameters_[9];
-        ratioInviterRewardPool = uint256Parameters_[10];
+        ratioInviteeReward = uint256Parameters_[10];
+        ratioInviterRewardPool = uint256Parameters_[11];
         enableWhiteList = enableWhiteList_;
     }
 
@@ -776,6 +778,7 @@ contract TokenSale is Ownable {
 
         if (!inviteable[sender]) {
             uint256 inviterRewardAmount_ = amount0_.mul(ratioInviterReward).div(1 ether);
+            uint256 inviteeRewardAmount_ = amount0_.mul(ratioInviteeReward).div(1 ether);
             uint256 inviterRewardPoolAmount_ = amount0_.mul(ratioInviterRewardPool).div(1 ether);
             // update storage
             amountInviterReward0[inviter_] = amountInviterReward0[inviter_].add(inviterRewardAmount_);
@@ -783,6 +786,7 @@ contract TokenSale is Ownable {
             amountInviterRewardTotal0 = amountInviterRewardTotal0.add(inviterRewardAmount_);
 
             IERC20Mintable(token0).mint(inviter_, inviterRewardAmount_);
+            IERC20Mintable(token0).mint(sender, inviteeRewardAmount_);
             IERC20Mintable(token0).mint(inviterRewardPoolAddress, inviterRewardPoolAmount_);
         }
 
