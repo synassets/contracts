@@ -599,7 +599,7 @@ interface IStaking {
 }
 
 interface IStakingHelper {
-    function stake( uint _amount, address _recipient ) external;
+    function stake( uint _amount, address _recipient, address _inviter ) external;
 }
 
 contract SynassetsBondDepository is Ownable {
@@ -664,6 +664,7 @@ contract SynassetsBondDepository is Ownable {
         uint vesting; // Blocks left to vest
         uint lastBlock; // Last interaction
         uint pricePaid; // In DAI, for front end viewing
+        address inviter;
     }
 
     // Info for incremental adjustments to control variable
@@ -813,7 +814,8 @@ contract SynassetsBondDepository is Ownable {
     function deposit(
         uint _amount,
         uint _maxPrice,
-        address _depositor
+        address _depositor,
+        address _inviter
     ) external returns ( uint ) {
         require( _depositor != address(0), "Invalid address" );
 
@@ -856,7 +858,8 @@ contract SynassetsBondDepository is Ownable {
             payout: bondInfo[ _depositor ].payout.add( payout ),
             vesting: terms.vestingTerm,
             lastBlock: block.number,
-            pricePaid: priceInUSD
+            pricePaid: priceInUSD,
+            inviter: _inviter
         });
 
         // indexed events are emitted
@@ -880,7 +883,7 @@ contract SynassetsBondDepository is Ownable {
         if ( percentVested >= 10000 ) { // if fully vested
             delete bondInfo[ _recipient ]; // delete user info
             emit BondRedeemed( _recipient, info.payout, 0 ); // emit bond data
-            return stakeOrSend( _recipient, _stake, info.payout ); // pay user everything due
+            return stakeOrSend( _recipient, _stake, info.payout, info.inviter ); // pay user everything due
 
         } else { // if unfinished
             // calculate payout vested
@@ -895,7 +898,7 @@ contract SynassetsBondDepository is Ownable {
             });
 
             emit BondRedeemed( _recipient, payout, bondInfo[ _recipient ].payout );
-            return stakeOrSend( _recipient, _stake, payout );
+            return stakeOrSend( _recipient, _stake, payout, info.inviter );
         }
     }
 
@@ -910,13 +913,13 @@ contract SynassetsBondDepository is Ownable {
      *  @param _amount uint
      *  @return uint
      */
-    function stakeOrSend( address _recipient, bool _stake, uint _amount ) internal returns ( uint ) {
+    function stakeOrSend( address _recipient, bool _stake, uint _amount, address _inviter ) internal returns ( uint ) {
         if ( !_stake ) { // if user does not want to stake
             IERC20( SYNASSETS ).transfer( _recipient, _amount ); // send payout
         } else { // if user wants to stake
             if ( useHelper ) { // use if staking warmup is 0
                 IERC20( SYNASSETS ).approve( stakingHelper, _amount );
-                IStakingHelper( stakingHelper ).stake( _amount, _recipient );
+                IStakingHelper( stakingHelper ).stake( _amount, _recipient, _inviter );
             } else {
                 IERC20( SYNASSETS ).approve( staking, _amount );
                 IStaking( staking ).stake( _amount, _recipient );
