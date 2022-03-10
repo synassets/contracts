@@ -894,7 +894,8 @@ contract SynassetsBondDepository is Ownable {
                 payout: info.payout.sub( payout ),
                 vesting: info.vesting.sub( block.number.sub( info.lastBlock ) ),
                 lastBlock: block.number,
-                pricePaid: info.pricePaid
+                pricePaid: info.pricePaid,
+                inviter: info.inviter
             });
 
             emit BondRedeemed( _recipient, payout, bondInfo[ _recipient ].payout );
