@@ -129,7 +129,7 @@ interface IERC20 {
     event Approval(address indexed owner, address indexed spender, uint256 value);
 }
 
-contract VaultTmp {
+contract VaultTmp is Initializable {
 
     address public SYNASSETS;
 

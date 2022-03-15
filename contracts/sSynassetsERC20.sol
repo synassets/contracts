@@ -1092,7 +1092,7 @@ contract sSynassets is ERC20Permit, Ownable {
     }
 
     address public stakingContract;
-    address public initializer;
+    address public initializer_;
 
     event LogSupply(uint256 indexed epoch, uint256 timestamp, uint256 totalSupply );
     event LogRebase( uint256 indexed epoch, uint256 rebase, uint256 index );
@@ -1127,7 +1127,7 @@ contract sSynassets is ERC20Permit, Ownable {
     mapping ( address => mapping ( address => uint256 ) ) private _allowedValue;
 
 //    constructor() ERC20("Staked Synassets Token", "sSYNASSETS", 9) ERC20Permit() {
-//        initializer = msg.sender;
+//        initializer_ = msg.sender;
 //        _totalSupply = INITIAL_FRAGMENTS_SUPPLY;
 //        _gonsPerFragment = TOTAL_GONS.div(_totalSupply);
 //    }
@@ -1139,13 +1139,13 @@ contract sSynassets is ERC20Permit, Ownable {
     }
 
     function __SATTimelock_init_unchain() internal initializer {
-        initializer = msg.sender;
+        initializer_ = msg.sender;
         _totalSupply = INITIAL_FRAGMENTS_SUPPLY;
         _gonsPerFragment = TOTAL_GONS.div(_totalSupply);
     }
 
     function initialize( address stakingContract_ ) external returns ( bool ) {
-        require( msg.sender == initializer );
+        require( msg.sender == initializer_ );
         require( stakingContract_ != address(0) );
         stakingContract = stakingContract_;
         _gonBalances[ stakingContract ] = TOTAL_GONS;
@@ -1153,7 +1153,7 @@ contract sSynassets is ERC20Permit, Ownable {
         emit Transfer( address(0x0), stakingContract, _totalSupply );
         emit LogStakingContractUpdated( stakingContract_ );
 
-        initializer = address(0);
+        initializer_ = address(0);
         return true;
     }
 

@@ -174,7 +174,7 @@ contract Ownable is IOwnable, Initializable {
 
     //  constructor () {
     //    _owner = msg.sender;
-    //    emit OwnershipTransferred( address(0), _owner );
+    //    emit OwnershipPushed( address(0), _owner );
     //  }
 
     function __Ownable_initialize() internal initializer {
@@ -183,7 +183,7 @@ contract Ownable is IOwnable, Initializable {
 
     function __Ownable_init_unchain() internal initializer {
         _owner = msg.sender;
-        emit OwnershipTransferred( address(0), _owner );
+        emit OwnershipPushed( address(0), _owner );
     }
 
     function manager() public view override returns (address) {

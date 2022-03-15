@@ -439,7 +439,7 @@ contract Distributor is Policy {
 //    }
 
     function __Distributor_initialize( address _treasury, address _SYNASSETS, uint _epochLength, uint _nextEpochBlock ) external initializer {
-        __Distributor_init_unchain(_treasury, _SYNASSETS, _epochLength, _newPolicy);
+        __Distributor_init_unchain(_treasury, _SYNASSETS, _epochLength, _nextEpochBlock);
         __Policy_initialize();
     }
 
