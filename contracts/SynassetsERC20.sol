@@ -1,6 +1,63 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
+/**
+ * @title Initializable
+ *
+ * @dev Helper contract to support initializer functions. To use it, replace
+ * the constructor with a function that has the `initializer` modifier.
+ * WARNING: Unlike constructors, initializer functions must be manually
+ * invoked. This applies both to deploying an Initializable contract, as well
+ * as extending an Initializable contract via inheritance.
+ * WARNING: When used with inheritance, manual care must be taken to not invoke
+ * a parent initializer twice, or ensure that all initializers are idempotent,
+ * because this is not dealt with automatically as with constructors.
+ */
+contract Initializable {
+
+    /**
+     * @dev Indicates that the contract has been initialized.
+   */
+    bool private initialized;
+
+    /**
+     * @dev Indicates that the contract is in the process of being initialized.
+   */
+    bool private initializing;
+
+    /**
+     * @dev Modifier to use in the initializer function of a contract.
+   */
+    modifier initializer() {
+        require(initializing || isConstructor() || !initialized, "Contract instance has already been initialized");
+
+        bool isTopLevelCall = !initializing;
+        if (isTopLevelCall) {
+            initializing = true;
+            initialized = true;
+        }
+
+        _;
+
+        if (isTopLevelCall) {
+            initializing = false;
+        }
+    }
+
+    /// @dev Returns true if and only if the function is running in the constructor
+    function isConstructor() private view returns (bool) {
+        // extcodesize checks the size of the code stored in an address, and
+        // address returns the current address. Since the code is still not
+        // deployed when running a constructor, any checks on its code size will
+        // yield zero, making it an effective way to detect if a contract is
+        // under construction or not.
+        address self = address(this);
+        uint256 cs;
+        assembly { cs := extcodesize(self) }
+        return cs == 0;
+    }
+}
+
 library EnumerableSet {
 
   // To implement this library for multiple types with as little code
@@ -597,7 +654,7 @@ library SafeMath {
   }
 }
 
-abstract contract ERC20 is IERC20 {
+abstract contract ERC20 is IERC20, Initializable {
 
   using SafeMath for uint256;
 
@@ -622,7 +679,17 @@ abstract contract ERC20 is IERC20 {
   // Present in ERC777
   uint8 internal _decimals;
 
-  constructor (string memory name_, string memory symbol_, uint8 decimals_) {
+//  constructor (string memory name_, string memory symbol_, uint8 decimals_) {
+//    _name = name_;
+//    _symbol = symbol_;
+//    _decimals = decimals_;
+//  }
+
+  function __ERC20_initialize(string memory name_, string memory symbol_, uint8 decimals_) internal initializer {
+    __ERC20_init_unchain(name_, symbol_, decimals_);
+  }
+
+  function __ERC20_init_unchain(string memory name_, string memory symbol_, uint8 decimals_) internal initializer {
     _name = name_;
     _symbol = symbol_;
     _decimals = decimals_;
@@ -763,21 +830,40 @@ abstract contract ERC20Permit is ERC20, IERC2612Permit {
 
     bytes32 public DOMAIN_SEPARATOR;
 
-    constructor() {
+//    constructor() {
+//
+//        uint256 chainID;
+//        assembly {
+//            chainID := chainid()
+//        }
+//
+//        DOMAIN_SEPARATOR = keccak256(abi.encode(
+//            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+//            keccak256(bytes(name())),
+//            keccak256(bytes("1")), // Version
+//            chainID,
+//            address(this)
+//        ));
+//    }
+
+    function __ERC20Permit_initialize(string memory name_, string memory symbol_, uint8 decimals_) internal initializer {
+        __ERC20Permit_init_unchain();
+        __ERC20_initialize(name_, symbol_, decimals_);
+    }
+
+    function __ERC20Permit_init_unchain() internal initializer {
         uint256 chainID;
         assembly {
             chainID := chainid()
         }
 
-        DOMAIN_SEPARATOR = keccak256(
-            abi.encode(
+        DOMAIN_SEPARATOR = keccak256(abi.encode(
                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
                 keccak256(bytes(name())),
                 keccak256(bytes("1")), // Version
                 chainID,
                 address(this)
-            )
-        );
+            ));
     }
 
     function permit(
@@ -816,13 +902,22 @@ interface IOwnable {
   function transferOwnership( address newOwner_ ) external;
 }
 
-contract Ownable is IOwnable {
+contract Ownable is IOwnable, Initializable {
 
   address internal _owner;
 
   event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
-  constructor () {
+//  constructor () {
+//    _owner = msg.sender;
+//    emit OwnershipTransferred( address(0), _owner );
+//  }
+
+  function __Ownable_initialize() internal initializer {
+    __Ownable_init_unchain();
+  }
+
+  function __Ownable_init_unchain() internal initializer {
     _owner = msg.sender;
     emit OwnershipTransferred( address(0), _owner );
   }
@@ -851,6 +946,13 @@ contract Ownable is IOwnable {
 contract VaultOwned is Ownable {
 
   address internal _vault;
+
+  function __VaultOwned_initialize() internal initializer {
+    __VaultOwned_init_unchain();
+    __Ownable_init_unchain();
+  }
+
+  function __VaultOwned_init_unchain() internal initializer { }
 
   function setVault( address vault_ ) external onlyOwner() returns ( bool ) {
     _vault = vault_;
@@ -1097,9 +1199,9 @@ contract SynassetsERC20Token is ERC20Permit, VaultOwned {
     mapping (address => bool) private _isExcludedFromFee;
 
     address private _vaultTmpAddress;
-    address public immutable uniswapV2Pair;
-    IUniswapV2Router02 public immutable uniswapV2Router;
-    IERC20 public immutable assetToken;
+    address public uniswapV2Pair;
+    IUniswapV2Router02 public uniswapV2Router;
+    IERC20 public assetToken;
 
     event SwapAndLiquify(
         uint256 tokensSwapped,
@@ -1113,7 +1215,22 @@ contract SynassetsERC20Token is ERC20Permit, VaultOwned {
         inSwapAndLiquify = false;
     }
 
-    constructor(IUniswapV2Router02 _uniswapV2Router, IERC20 _assetToken) ERC20("Synassets Token", "SYNASSETS", 9) {
+//    constructor(IUniswapV2Router02 _uniswapV2Router, IERC20 _assetToken) ERC20("Synassets Token", "SYNASSETS", 9) {
+//        uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), address(_assetToken));
+//        uniswapV2Router = _uniswapV2Router;
+//        assetToken = _assetToken;
+//
+//        _isExcludedFromFee[msg.sender] = true;
+//        _isExcludedFromFee[address(this)] = true;
+//    }
+
+    function __SynassetsERC20Token_initialize(IUniswapV2Router02 _uniswapV2Router, IERC20 _assetToken) external initializer {
+        __SynassetsERC20Token_unchain(_uniswapV2Router, _assetToken);
+        __VaultOwned_initialize();
+        __ERC20Permit_initialize("Synassets Token", "SYNASSETS", 9);
+    }
+
+    function __SynassetsERC20Token_unchain(IUniswapV2Router02 _uniswapV2Router, IERC20 _assetToken) internal initializer {
         uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), address(_assetToken));
         uniswapV2Router = _uniswapV2Router;
         assetToken = _assetToken;

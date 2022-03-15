@@ -1,6 +1,63 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
+/**
+ * @title Initializable
+ *
+ * @dev Helper contract to support initializer functions. To use it, replace
+ * the constructor with a function that has the `initializer` modifier.
+ * WARNING: Unlike constructors, initializer functions must be manually
+ * invoked. This applies both to deploying an Initializable contract, as well
+ * as extending an Initializable contract via inheritance.
+ * WARNING: When used with inheritance, manual care must be taken to not invoke
+ * a parent initializer twice, or ensure that all initializers are idempotent,
+ * because this is not dealt with automatically as with constructors.
+ */
+contract Initializable {
+
+    /**
+     * @dev Indicates that the contract has been initialized.
+   */
+    bool private initialized;
+
+    /**
+     * @dev Indicates that the contract is in the process of being initialized.
+   */
+    bool private initializing;
+
+    /**
+     * @dev Modifier to use in the initializer function of a contract.
+   */
+    modifier initializer() {
+        require(initializing || isConstructor() || !initialized, "Contract instance has already been initialized");
+
+        bool isTopLevelCall = !initializing;
+        if (isTopLevelCall) {
+            initializing = true;
+            initialized = true;
+        }
+
+        _;
+
+        if (isTopLevelCall) {
+            initializing = false;
+        }
+    }
+
+    /// @dev Returns true if and only if the function is running in the constructor
+    function isConstructor() private view returns (bool) {
+        // extcodesize checks the size of the code stored in an address, and
+        // address returns the current address. Since the code is still not
+        // deployed when running a constructor, any checks on its code size will
+        // yield zero, making it an effective way to detect if a contract is
+        // under construction or not.
+        address self = address(this);
+        uint256 cs;
+        assembly { cs := extcodesize(self) }
+        return cs == 0;
+    }
+}
+
 interface IOwnable {
   function policy() external view returns (address);
 
@@ -11,7 +68,7 @@ interface IOwnable {
   function pullManagement() external;
 }
 
-contract Ownable is IOwnable {
+contract Ownable is IOwnable, Initializable {
 
     address internal _owner;
     address internal _newOwner;
@@ -19,9 +76,18 @@ contract Ownable is IOwnable {
     event OwnershipPushed(address indexed previousOwner, address indexed newOwner);
     event OwnershipPulled(address indexed previousOwner, address indexed newOwner);
 
-    constructor () {
+    //  constructor () {
+    //    _owner = msg.sender;
+    //    emit OwnershipTransferred( address(0), _owner );
+    //  }
+
+    function __Ownable_initialize() internal initializer {
+        __Ownable_init_unchain();
+    }
+
+    function __Ownable_init_unchain() internal initializer {
         _owner = msg.sender;
-        emit OwnershipPushed( address(0), _owner );
+        emit OwnershipTransferred( address(0), _owner );
     }
 
     function policy() public view override returns (address) {
@@ -623,13 +689,13 @@ contract SynassetsBondDepository is Ownable {
 
     /* ======== STATE VARIABLES ======== */
 
-    address public immutable SYNASSETS; // token given as payment for bond
-    address public immutable principle; // token used to create bond
-    address public immutable treasury; // mints SYNASSETS when receives principle
-    address public immutable DAO; // receives profit share from bond
+    address public SYNASSETS; // token given as payment for bond
+    address public principle; // token used to create bond
+    address public treasury; // mints SYNASSETS when receives principle
+    address public DAO; // receives profit share from bond
 
-    bool public immutable isLiquidityBond; // LP and Reserve bonds are treated slightly different
-    address public immutable bondCalculator; // calculates value of LP tokens
+    bool public isLiquidityBond; // LP and Reserve bonds are treated slightly different
+    address public bondCalculator; // calculates value of LP tokens
 
     address public staking; // to auto-stake payout
     address public stakingHelper; // to stake and claim if no staking warmup
@@ -681,13 +747,43 @@ contract SynassetsBondDepository is Ownable {
 
     /* ======== INITIALIZATION ======== */
 
-    constructor (
+//    constructor (
+//        address _SYNASSETS,
+//        address _principle,
+//        address _treasury,
+//        address _DAO,
+//        address _bondCalculator
+//    ) {
+//        require( _SYNASSETS != address(0) );
+//        SYNASSETS = _SYNASSETS;
+//        require( _principle != address(0) );
+//        principle = _principle;
+//        require( _treasury != address(0) );
+//        treasury = _treasury;
+//        require( _DAO != address(0) );
+//        DAO = _DAO;
+//        // bondCalculator should be address(0) if not LP bond
+//        bondCalculator = _bondCalculator;
+//        isLiquidityBond = ( _bondCalculator != address(0) );
+//    }
+
+    function __SynassetsBondDepository_initialize(
         address _SYNASSETS,
         address _principle,
         address _treasury,
         address _DAO,
         address _bondCalculator
-    ) {
+    ) external initializer {
+        __SynassetsBondDepository_init_unchain(_SYNASSETS, _principle, _treasury, _DAO, _bondCalculator);
+    }
+
+    function __SynassetsBondDepository_init_unchain(
+        address _SYNASSETS,
+        address _principle,
+        address _treasury,
+        address _DAO,
+        address _bondCalculator
+    ) internal initializer {
         require( _SYNASSETS != address(0) );
         SYNASSETS = _SYNASSETS;
         require( _principle != address(0) );

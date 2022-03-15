@@ -1,6 +1,63 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
+/**
+ * @title Initializable
+ *
+ * @dev Helper contract to support initializer functions. To use it, replace
+ * the constructor with a function that has the `initializer` modifier.
+ * WARNING: Unlike constructors, initializer functions must be manually
+ * invoked. This applies both to deploying an Initializable contract, as well
+ * as extending an Initializable contract via inheritance.
+ * WARNING: When used with inheritance, manual care must be taken to not invoke
+ * a parent initializer twice, or ensure that all initializers are idempotent,
+ * because this is not dealt with automatically as with constructors.
+ */
+contract Initializable {
+
+    /**
+     * @dev Indicates that the contract has been initialized.
+   */
+    bool private initialized;
+
+    /**
+     * @dev Indicates that the contract is in the process of being initialized.
+   */
+    bool private initializing;
+
+    /**
+     * @dev Modifier to use in the initializer function of a contract.
+   */
+    modifier initializer() {
+        require(initializing || isConstructor() || !initialized, "Contract instance has already been initialized");
+
+        bool isTopLevelCall = !initializing;
+        if (isTopLevelCall) {
+            initializing = true;
+            initialized = true;
+        }
+
+        _;
+
+        if (isTopLevelCall) {
+            initializing = false;
+        }
+    }
+
+    /// @dev Returns true if and only if the function is running in the constructor
+    function isConstructor() private view returns (bool) {
+        // extcodesize checks the size of the code stored in an address, and
+        // address returns the current address. Since the code is still not
+        // deployed when running a constructor, any checks on its code size will
+        // yield zero, making it an effective way to detect if a contract is
+        // under construction or not.
+        address self = address(this);
+        uint256 cs;
+        assembly { cs := extcodesize(self) }
+        return cs == 0;
+    }
+}
+
 library FullMath {
     function fullMul(uint256 x, uint256 y) private pure returns (uint256 l, uint256 h) {
         uint256 mm = mulmod(x, y, uint256(-1));
@@ -259,15 +316,24 @@ interface IBondingCalculator {
   function valuation( address pair_, uint amount_ ) external view returns ( uint _value );
 }
 
-contract SynassetsBondingCalculator is IBondingCalculator {
+contract SynassetsBondingCalculator is IBondingCalculator, Initializable {
 
     using FixedPoint for *;
     using SafeMath for uint;
     using SafeMath for uint112;
 
-    address public immutable SYNASSETS;
+    address public SYNASSETS;
 
-    constructor( address _SYNASSETS ) {
+//    constructor( address _SYNASSETS ) {
+//        require( _SYNASSETS != address(0) );
+//        SYNASSETS = _SYNASSETS;
+//    }
+
+    function __SynassetsBondingCalculator_initialize( address _SYNASSETS ) external initializer {
+        __SynassetsBondingCalculator_unchain(_SYNASSETS);
+    }
+
+    function __SynassetsBondingCalculator_unchain( address _SYNASSETS ) internal initializer {
         require( _SYNASSETS != address(0) );
         SYNASSETS = _SYNASSETS;
     }
