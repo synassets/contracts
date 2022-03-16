@@ -708,24 +708,11 @@ contract TokenSale is Ownable {
 
     // [ k_, kDenominator_, b_, bDenominator_, openAt_, closeAt_, maxAmount1_, maxAmount1PerWallet_, minAmount1PerWallet_, ratioInviterReward_, ratioInviteeReward_ ]
     function setParameters(
-        bool enableWhiteList_,
-        address token0_,
-        address token1_,
-        address payable marketFund_,
-        address payable liquidityFund_,
-        address newInviterRewardPoolAddress_,
+
         uint256 [] memory uint256Parameters_
     ) external onlyOwner {
+
         require(uint256Parameters_.length == 12, 'Invalid Parameters');
-
-        enableWhiteList = enableWhiteList_;
-        require(token0_ != address(0), 'IA');
-        token0 = token0_;
-        token1 = token1_;
-        marketFund = marketFund_;
-        liquidityFund = liquidityFund_;
-        inviterRewardPoolAddress = newInviterRewardPoolAddress_;
-
         if (uint256Parameters_[0] > 0) k = uint256Parameters_[0];
         if (uint256Parameters_[1] > 0) kDenominator = uint256Parameters_[1];
         if (uint256Parameters_[2] > 0) b = uint256Parameters_[2];
@@ -740,7 +727,15 @@ contract TokenSale is Ownable {
         if (uint256Parameters_[11] > 0) ratioInviterRewardPool = uint256Parameters_[11];
     }
 
-    enum MANAGING_ADDRESS { MarketFund, LiquidityFund, InviterRewardPoolAddress }
+    enum MANAGING_ADDRESS {
+        MarketFund,
+        LiquidityFund,
+        InviterRewardPoolAddress,
+        enableWhiteList
+}
+
+
+
 
     function setAddress(MANAGING_ADDRESS managing_, address payable address_) external onlyOwner {
         if (managing_ == MANAGING_ADDRESS.MarketFund) { // 0
@@ -749,6 +744,9 @@ contract TokenSale is Ownable {
             liquidityFund = address_;
         } else if (managing_ == MANAGING_ADDRESS.InviterRewardPoolAddress) { // 2
             inviterRewardPoolAddress = address_;
+        }
+        else if (managing_ == MANAGING_ADDRESS.enableWhiteList) { // 3
+            enableWhiteList = (address_!=address(0)) ;
         }
     }
 
