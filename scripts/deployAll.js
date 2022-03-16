@@ -9,21 +9,22 @@ async function main() {
     const SAT_Decimal = 18;
 
     // timestamp
-    const OGOpenAt = 1642655409;
-    const OGCloseAt = 1642655409;
+    const OGOpenAt = 1647423598;
+    const OGCloseAt = 1647509998;
     // timestamp
 
     // USDC
     const OGPriceStart = 0.15;
     const OGPriceEnd = 0.2;
     const OGMax = 1000;
-    const OGMin = 1000;
-    const OGGoal = 1000000;
+    const OGMin = 500;
+    const OGGoal = 100000;
     // USDC
 
     // %
-    const OGInviterRewardRate = 0.04;
+    const OGInviterRewardRate = 0.025;
     const OGInviteeRewardRate = 0.01;
+    const OGInviteepoolReward = 0.015;
     // %
 
     const OGMarketFund = '0x1dE27655b33603b3A6812177b9c2c480FB238fDb';
@@ -54,7 +55,11 @@ async function main() {
 
     const USDC = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174";
 
-    const OGParameters = formatParameters(OGPriceStart,OGPriceEnd,OGGoal,USDC_Decimal,SAT_Decimal,OGOpenAt,OGCloseAt,OGMax,OGMin,OGInviterRewardRate,OGInviteeRewardRate);
+    const OGParameters = formatParameters(OGPriceStart,OGPriceEnd,OGGoal,USDC_Decimal,SAT_Decimal,OGOpenAt,OGCloseAt,OGMax,OGMin,OGInviterRewardRate,OGInviteeRewardRate,OGInviteepoolReward);
+
+    console.log('OGParameters: ' + OGParameters);
+
+ /*
     const PBParameters = formatParameters(PBPriceStart,PBPriceEnd,PBGoal,USDC_Decimal,SAT_Decimal,PBOpenAt,PBCloseAt,PBMax,PBMin,PBInviterRewardRate,PBInviteeRewardRate);
 
     const SAT = await ethers.getContractFactory('SATERC20Token');
@@ -119,10 +124,10 @@ async function main() {
     console.log('proxySAT address: ' + proxySAT.address);
     console.log('proxyTOKEN_SALE_OG address: ' + proxyTOKEN_SALE_OG.address);
     console.log('proxyTOKEN_SALE_PC address: ' + proxyTOKEN_SALE_PB.address);
-    console.log('proxySATTIMELOCK address: ' + proxySATTIMELOCK.address);
+    console.log('proxySATTIMELOCK address: ' + proxySATTIMELOCK.address);*/
 }
 
-function formatParameters(start,end,goal,decimal1,decimal2,openAt,closeAt,max,min,rate1,rate2) {
+function formatParameters(start,end,goal,decimal1,decimal2,openAt,closeAt,max,min,rate1,rate2,rate3) {
     const [k,k_Denominator,b,b_Denominator] = calcK_B(start,end,goal,decimal1,decimal2);
 
     openAt = BigInt(openAt);
@@ -132,8 +137,8 @@ function formatParameters(start,end,goal,decimal1,decimal2,openAt,closeAt,max,mi
     min = BigInt(min * (10 ** decimal1));
     rate1 = BigInt(rate1 * (10 ** 18));
     rate2 = BigInt(rate2 * (10 ** 18));
-
-    return [k,k_Denominator,b,b_Denominator,openAt,closeAt,goal,max,min,rate1,rate2];
+    rate3 = BigInt(rate3 * (10 ** 18));
+    return [k,k_Denominator,b,b_Denominator,openAt,closeAt,goal,max,min,rate1,rate2,rate3];
 }
 
 function calcK_B(start,end,goal,decimal1,decimal2) {

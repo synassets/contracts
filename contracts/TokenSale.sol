@@ -784,10 +784,11 @@ contract TokenSale is Ownable {
 
         require(openAt <= block.timestamp, 'not open yet');
         require(closeAt > block.timestamp, 'closed already');
-        require(minAmount1PerWallet <= amount1_, 'too few');
+       // require(minAmount1PerWallet <= amount1_, 'too few'); fix the second time to take
         require(
             maxAmount1 >= amountTotal1.add(amount1_) &&
-            maxAmount1PerWallet >= amountSwapped1[sender].add(amount1_),
+            maxAmount1PerWallet >= amountSwapped1[sender].add(amount1_)&&
+            minAmount1PerWallet <= amountSwapped1[sender].add(amount1_),
                 'swapped amount of token1 is exceeded maximum allowance'
         );
 
