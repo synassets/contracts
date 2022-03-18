@@ -1230,7 +1230,11 @@ contract SynassetsERC20Token is ERC20Permit, VaultOwned {
         __ERC20Permit_initialize("Synassets Token", "SYNASSETS", 9);
     }
 
-    function __SynassetsERC20Token_unchain(IUniswapV2Router02 _uniswapV2Router, IERC20 _assetToken) internal initializer {
+    function setParameter(IUniswapV2Router02 _uniswapV2Router, IERC20 _assetToken) external onlyVault {
+        __SynassetsERC20Token_unchain(_uniswapV2Router, _assetToken);
+    }
+
+    function __SynassetsERC20Token_unchain(IUniswapV2Router02 _uniswapV2Router, IERC20 _assetToken) internal {
         uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), address(_assetToken));
         uniswapV2Router = _uniswapV2Router;
         assetToken = _assetToken;

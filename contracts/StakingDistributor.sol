@@ -443,7 +443,11 @@ contract Distributor is Policy {
         __Policy_initialize();
     }
 
-    function __Distributor_init_unchain( address _treasury, address _SYNASSETS, uint _epochLength, uint _nextEpochBlock ) internal initializer {
+    function setParameters( address _treasury, address _SYNASSETS, uint _epochLength, uint _nextEpochBlock ) onlyPolicy external {
+        __Distributor_init_unchain(_treasury, _SYNASSETS, _epochLength, _nextEpochBlock);
+    }
+
+    function __Distributor_init_unchain( address _treasury, address _SYNASSETS, uint _epochLength, uint _nextEpochBlock ) internal {
         require( _treasury != address(0) );
         treasury = _treasury;
         require( _SYNASSETS != address(0) );

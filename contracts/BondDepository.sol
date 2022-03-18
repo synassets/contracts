@@ -777,13 +777,23 @@ contract SynassetsBondDepository is Ownable {
         __SynassetsBondDepository_init_unchain(_SYNASSETS, _principle, _treasury, _DAO, _bondCalculator);
     }
 
+    function __setParameters(
+        address _SYNASSETS,
+        address _principle,
+        address _treasury,
+        address _DAO,
+        address _bondCalculator
+    ) external onlyPolicy {
+        __SynassetsBondDepository_init_unchain(_SYNASSETS, _principle, _treasury, _DAO, _bondCalculator);
+    }
+
     function __SynassetsBondDepository_init_unchain(
         address _SYNASSETS,
         address _principle,
         address _treasury,
         address _DAO,
         address _bondCalculator
-    ) internal initializer {
+    ) internal {
         require( _SYNASSETS != address(0) );
         SYNASSETS = _SYNASSETS;
         require( _principle != address(0) );

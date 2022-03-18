@@ -662,6 +662,17 @@ contract SynassetsStaking is Ownable {
         uint _firstEpochBlock
     ) external initializer {
         __SynassetsStaking_init_unchain(_SYNASSETS, _sSYNASSETS, _epochLength, _firstEpochNumber, _firstEpochBlock);
+        __Ownable_initialize();
+    }
+
+    function setParameter(
+        address _SYNASSETS,
+        address _sSYNASSETS,
+        uint _epochLength,
+        uint _firstEpochNumber,
+        uint _firstEpochBlock
+    ) external onlyManager {
+        __SynassetsStaking_init_unchain(_SYNASSETS, _sSYNASSETS, _epochLength, _firstEpochNumber, _firstEpochBlock);
     }
 
     function __SynassetsStaking_init_unchain(
@@ -670,7 +681,7 @@ contract SynassetsStaking is Ownable {
         uint _epochLength,
         uint _firstEpochNumber,
         uint _firstEpochBlock
-    ) internal initializer {
+    ) internal {
         require( _SYNASSETS != address(0) );
         SYNASSETS = _SYNASSETS;
         require( _sSYNASSETS != address(0) );
