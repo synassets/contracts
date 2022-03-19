@@ -620,7 +620,7 @@ contract SATTimelock is Ownable {
         IERC20(token).safeTransfer(claimAddress, unlocked_);
     }
 
-    function increaseReward() external {
+    function increaseReward() public {
         uint256 balance_ = IERC20(token).balanceOf(address(this));
         uint256 amount_ = balance_.sub(reserveToken);
 

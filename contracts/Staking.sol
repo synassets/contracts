@@ -1,6 +1,63 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
+/**
+ * @title Initializable
+ *
+ * @dev Helper contract to support initializer functions. To use it, replace
+ * the constructor with a function that has the `initializer` modifier.
+ * WARNING: Unlike constructors, initializer functions must be manually
+ * invoked. This applies both to deploying an Initializable contract, as well
+ * as extending an Initializable contract via inheritance.
+ * WARNING: When used with inheritance, manual care must be taken to not invoke
+ * a parent initializer twice, or ensure that all initializers are idempotent,
+ * because this is not dealt with automatically as with constructors.
+ */
+contract Initializable {
+
+    /**
+     * @dev Indicates that the contract has been initialized.
+   */
+    bool private initialized;
+
+    /**
+     * @dev Indicates that the contract is in the process of being initialized.
+   */
+    bool private initializing;
+
+    /**
+     * @dev Modifier to use in the initializer function of a contract.
+   */
+    modifier initializer() {
+        require(initializing || isConstructor() || !initialized, "Contract instance has already been initialized");
+
+        bool isTopLevelCall = !initializing;
+        if (isTopLevelCall) {
+            initializing = true;
+            initialized = true;
+        }
+
+        _;
+
+        if (isTopLevelCall) {
+            initializing = false;
+        }
+    }
+
+    /// @dev Returns true if and only if the function is running in the constructor
+    function isConstructor() private view returns (bool) {
+        // extcodesize checks the size of the code stored in an address, and
+        // address returns the current address. Since the code is still not
+        // deployed when running a constructor, any checks on its code size will
+        // yield zero, making it an effective way to detect if a contract is
+        // under construction or not.
+        address self = address(this);
+        uint256 cs;
+        assembly { cs := extcodesize(self) }
+        return cs == 0;
+    }
+}
+
 library SafeMath {
     /**
      * @dev Returns the addition of two unsigned integers, reverting on
@@ -475,7 +532,7 @@ interface IOwnable {
   function pullManagement() external;
 }
 
-contract Ownable is IOwnable {
+contract Ownable is IOwnable, Initializable {
 
     address internal _owner;
     address internal _newOwner;
@@ -483,7 +540,16 @@ contract Ownable is IOwnable {
     event OwnershipPushed(address indexed previousOwner, address indexed newOwner);
     event OwnershipPulled(address indexed previousOwner, address indexed newOwner);
 
-    constructor () {
+    //  constructor () {
+    //    _owner = msg.sender;
+    //    emit OwnershipPushed( address(0), _owner );
+    //  }
+
+    function __Ownable_initialize() internal initializer {
+        __Ownable_init_unchain();
+    }
+
+    function __Ownable_init_unchain() internal initializer {
         _owner = msg.sender;
         emit OwnershipPushed( address(0), _owner );
     }
@@ -547,8 +613,8 @@ contract SynassetsStaking is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    address public immutable SYNASSETS;
-    address public immutable sSYNASSETS;
+    address public SYNASSETS;
+    address public sSYNASSETS;
 
     struct Epoch {
         uint length;
@@ -568,13 +634,54 @@ contract SynassetsStaking is Ownable {
 
     address public consensusPool;
 
-    constructor (
+//    constructor (
+//        address _SYNASSETS,
+//        address _sSYNASSETS,
+//        uint _epochLength,
+//        uint _firstEpochNumber,
+//        uint _firstEpochBlock
+//    ) {
+//        require( _SYNASSETS != address(0) );
+//        SYNASSETS = _SYNASSETS;
+//        require( _sSYNASSETS != address(0) );
+//        sSYNASSETS = _sSYNASSETS;
+//
+//        epoch = Epoch({
+//            length: _epochLength,
+//            number: _firstEpochNumber,
+//            endBlock: _firstEpochBlock,
+//            distribute: 0
+//        });
+//    }
+
+    function __SynassetsStaking_initialize(
         address _SYNASSETS,
         address _sSYNASSETS,
         uint _epochLength,
         uint _firstEpochNumber,
         uint _firstEpochBlock
-    ) {
+    ) external initializer {
+        __SynassetsStaking_init_unchain(_SYNASSETS, _sSYNASSETS, _epochLength, _firstEpochNumber, _firstEpochBlock);
+        __Ownable_initialize();
+    }
+
+    function setParameter(
+        address _SYNASSETS,
+        address _sSYNASSETS,
+        uint _epochLength,
+        uint _firstEpochNumber,
+        uint _firstEpochBlock
+    ) external onlyManager {
+        __SynassetsStaking_init_unchain(_SYNASSETS, _sSYNASSETS, _epochLength, _firstEpochNumber, _firstEpochBlock);
+    }
+
+    function __SynassetsStaking_init_unchain(
+        address _SYNASSETS,
+        address _sSYNASSETS,
+        uint _epochLength,
+        uint _firstEpochNumber,
+        uint _firstEpochBlock
+    ) internal {
         require( _SYNASSETS != address(0) );
         SYNASSETS = _SYNASSETS;
         require( _sSYNASSETS != address(0) );

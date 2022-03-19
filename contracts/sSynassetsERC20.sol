@@ -1,6 +1,62 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
+/**
+ * @title Initializable
+ *
+ * @dev Helper contract to support initializer functions. To use it, replace
+ * the constructor with a function that has the `initializer` modifier.
+ * WARNING: Unlike constructors, initializer functions must be manually
+ * invoked. This applies both to deploying an Initializable contract, as well
+ * as extending an Initializable contract via inheritance.
+ * WARNING: When used with inheritance, manual care must be taken to not invoke
+ * a parent initializer twice, or ensure that all initializers are idempotent,
+ * because this is not dealt with automatically as with constructors.
+ */
+contract Initializable {
+
+    /**
+     * @dev Indicates that the contract has been initialized.
+   */
+    bool private initialized;
+
+    /**
+     * @dev Indicates that the contract is in the process of being initialized.
+   */
+    bool private initializing;
+
+    /**
+     * @dev Modifier to use in the initializer function of a contract.
+   */
+    modifier initializer() {
+        require(initializing || isConstructor() || !initialized, "Contract instance has already been initialized");
+
+        bool isTopLevelCall = !initializing;
+        if (isTopLevelCall) {
+            initializing = true;
+            initialized = true;
+        }
+
+        _;
+
+        if (isTopLevelCall) {
+            initializing = false;
+        }
+    }
+
+    /// @dev Returns true if and only if the function is running in the constructor
+    function isConstructor() private view returns (bool) {
+        // extcodesize checks the size of the code stored in an address, and
+        // address returns the current address. Since the code is still not
+        // deployed when running a constructor, any checks on its code size will
+        // yield zero, making it an effective way to detect if a contract is
+        // under construction or not.
+        address self = address(this);
+        uint256 cs;
+        assembly { cs := extcodesize(self) }
+        return cs == 0;
+    }
+}
 
 /**
  * @dev Wrappers over Solidity's arithmetic operations with added overflow
@@ -508,7 +564,7 @@ interface IERC20 {
 
 abstract contract ERC20
   is
-    IERC20
+    IERC20, Initializable
   {
 
   using SafeMath for uint256;
@@ -543,10 +599,20 @@ abstract contract ERC20
    * All three of these values are immutable: they can only be set once during
    * construction.
    */
-  constructor (string memory name_, string memory symbol_, uint8 decimals_) {
-    _name = name_;
-    _symbol = symbol_;
-    _decimals = decimals_;
+//  constructor (string memory name_, string memory symbol_, uint8 decimals_) {
+//    _name = name_;
+//    _symbol = symbol_;
+//    _decimals = decimals_;
+//  }
+
+  function __ERC20_initialize(string memory name_, string memory symbol_, uint8 decimals_) internal initializer {
+    __ERC20_init_unchain(name_, symbol_, decimals_);
+  }
+
+  function __ERC20_init_unchain(string memory name_, string memory symbol_, uint8 decimals_) internal initializer {
+      _name = name_;
+      _symbol = symbol_;
+      _decimals = decimals_;
   }
 
   /**
@@ -886,20 +952,40 @@ abstract contract ERC20Permit is ERC20, IERC2612Permit {
 
     bytes32 public DOMAIN_SEPARATOR;
 
-    constructor() {
+//    constructor() {
+//
+//        uint256 chainID;
+//        assembly {
+//            chainID := chainid()
+//        }
+//
+//        DOMAIN_SEPARATOR = keccak256(abi.encode(
+//            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+//            keccak256(bytes(name())),
+//            keccak256(bytes("1")), // Version
+//            chainID,
+//            address(this)
+//        ));
+//    }
 
+    function __ERC20Permit_initialize(string memory name_, string memory symbol_, uint8 decimals_) internal initializer {
+        __ERC20Permit_init_unchain();
+        __ERC20_initialize(name_, symbol_, decimals_);
+    }
+
+    function __ERC20Permit_init_unchain() internal initializer {
         uint256 chainID;
         assembly {
             chainID := chainid()
         }
 
         DOMAIN_SEPARATOR = keccak256(abi.encode(
-            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-            keccak256(bytes(name())),
-            keccak256(bytes("1")), // Version
-            chainID,
-            address(this)
-        ));
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256(bytes(name())),
+                keccak256(bytes("1")), // Version
+                chainID,
+                address(this)
+            ));
     }
 
     /**
@@ -947,7 +1033,7 @@ interface IOwnable {
   function pullManagement() external;
 }
 
-contract Ownable is IOwnable {
+contract Ownable is IOwnable, Initializable {
 
     address internal _owner;
     address internal _newOwner;
@@ -955,7 +1041,16 @@ contract Ownable is IOwnable {
     event OwnershipPushed(address indexed previousOwner, address indexed newOwner);
     event OwnershipPulled(address indexed previousOwner, address indexed newOwner);
 
-    constructor () {
+//    constructor () {
+//        _owner = msg.sender;
+//        emit OwnershipPushed( address(0), _owner );
+//    }
+
+    function __Ownable_initialize() internal initializer {
+        __Ownable_init_unchain();
+    }
+
+    function __Ownable_init_unchain() internal initializer {
         _owner = msg.sender;
         emit OwnershipPushed( address(0), _owner );
     }
@@ -997,7 +1092,7 @@ contract sSynassets is ERC20Permit, Ownable {
     }
 
     address public stakingContract;
-    address public initializer;
+    address public initializer_;
 
     event LogSupply(uint256 indexed epoch, uint256 timestamp, uint256 totalSupply );
     event LogRebase( uint256 indexed epoch, uint256 rebase, uint256 index );
@@ -1031,14 +1126,26 @@ contract sSynassets is ERC20Permit, Ownable {
 
     mapping ( address => mapping ( address => uint256 ) ) private _allowedValue;
 
-    constructor() ERC20("Staked Synassets Token", "sSYNASSETS", 9) ERC20Permit() {
-        initializer = msg.sender;
+//    constructor() ERC20("Staked Synassets Token", "sSYNASSETS", 9) ERC20Permit() {
+//        initializer_ = msg.sender;
+//        _totalSupply = INITIAL_FRAGMENTS_SUPPLY;
+//        _gonsPerFragment = TOTAL_GONS.div(_totalSupply);
+//    }
+
+    function __sSynassets_initialize() external initializer {
+        __SATTimelock_init_unchain();
+        __Ownable_initialize();
+        __ERC20Permit_initialize("Staked Synassets Token", "sSYNASSETS", 9);
+    }
+
+    function __SATTimelock_init_unchain() internal initializer {
+        initializer_ = msg.sender;
         _totalSupply = INITIAL_FRAGMENTS_SUPPLY;
         _gonsPerFragment = TOTAL_GONS.div(_totalSupply);
     }
 
     function initialize( address stakingContract_ ) external returns ( bool ) {
-        require( msg.sender == initializer );
+        require( msg.sender == initializer_ );
         require( stakingContract_ != address(0) );
         stakingContract = stakingContract_;
         _gonBalances[ stakingContract ] = TOTAL_GONS;
@@ -1046,7 +1153,7 @@ contract sSynassets is ERC20Permit, Ownable {
         emit Transfer( address(0x0), stakingContract, _totalSupply );
         emit LogStakingContractUpdated( stakingContract_ );
 
-        initializer = address(0);
+        initializer_ = address(0);
         return true;
     }
 

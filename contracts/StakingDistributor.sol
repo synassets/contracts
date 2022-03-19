@@ -2,6 +2,63 @@
 
 pragma solidity 0.7.5;
 
+/**
+ * @title Initializable
+ *
+ * @dev Helper contract to support initializer functions. To use it, replace
+ * the constructor with a function that has the `initializer` modifier.
+ * WARNING: Unlike constructors, initializer functions must be manually
+ * invoked. This applies both to deploying an Initializable contract, as well
+ * as extending an Initializable contract via inheritance.
+ * WARNING: When used with inheritance, manual care must be taken to not invoke
+ * a parent initializer twice, or ensure that all initializers are idempotent,
+ * because this is not dealt with automatically as with constructors.
+ */
+contract Initializable {
+
+    /**
+     * @dev Indicates that the contract has been initialized.
+   */
+    bool private initialized;
+
+    /**
+     * @dev Indicates that the contract is in the process of being initialized.
+   */
+    bool private initializing;
+
+    /**
+     * @dev Modifier to use in the initializer function of a contract.
+   */
+    modifier initializer() {
+        require(initializing || isConstructor() || !initialized, "Contract instance has already been initialized");
+
+        bool isTopLevelCall = !initializing;
+        if (isTopLevelCall) {
+            initializing = true;
+            initialized = true;
+        }
+
+        _;
+
+        if (isTopLevelCall) {
+            initializing = false;
+        }
+    }
+
+    /// @dev Returns true if and only if the function is running in the constructor
+    function isConstructor() private view returns (bool) {
+        // extcodesize checks the size of the code stored in an address, and
+        // address returns the current address. Since the code is still not
+        // deployed when running a constructor, any checks on its code size will
+        // yield zero, making it an effective way to detect if a contract is
+        // under construction or not.
+        address self = address(this);
+        uint256 cs;
+        assembly { cs := extcodesize(self) }
+        return cs == 0;
+    }
+}
+
 library SafeERC20 {
     using SafeMath for uint256;
     using Address for address;
@@ -286,14 +343,23 @@ interface IPolicy {
     function pullPolicy() external;
 }
 
-contract Policy is IPolicy {
+contract Policy is IPolicy, Initializable {
 
     address internal _policy;
     address internal _newPolicy;
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
-    constructor () {
+//    constructor () {
+//        _policy = msg.sender;
+//        emit OwnershipTransferred( address(0), _policy );
+//    }
+
+    function __Policy_initialize() internal initializer {
+        __Policy_init_unchain();
+    }
+
+    function __Policy_init_unchain() internal initializer {
         _policy = msg.sender;
         emit OwnershipTransferred( address(0), _policy );
     }
@@ -336,10 +402,10 @@ contract Distributor is Policy {
 
     /* ====== VARIABLES ====== */
 
-    address public immutable SYNASSETS;
-    address public immutable treasury;
+    address public SYNASSETS;
+    address public treasury;
 
-    uint public immutable epochLength;
+    uint public epochLength;
     uint public nextEpochBlock;
 
     mapping( uint => Adjust ) public adjustments;
@@ -363,7 +429,25 @@ contract Distributor is Policy {
 
     /* ====== CONSTRUCTOR ====== */
 
-    constructor( address _treasury, address _SYNASSETS, uint _epochLength, uint _nextEpochBlock ) {
+//    constructor( address _treasury, address _SYNASSETS, uint _epochLength, uint _nextEpochBlock ) {
+//        require( _treasury != address(0) );
+//        treasury = _treasury;
+//        require( _SYNASSETS != address(0) );
+//        SYNASSETS = _SYNASSETS;
+//        epochLength = _epochLength;
+//        nextEpochBlock = _nextEpochBlock;
+//    }
+
+    function __Distributor_initialize( address _treasury, address _SYNASSETS, uint _epochLength, uint _nextEpochBlock ) external initializer {
+        __Distributor_init_unchain(_treasury, _SYNASSETS, _epochLength, _nextEpochBlock);
+        __Policy_initialize();
+    }
+
+    function setParameters( address _treasury, address _SYNASSETS, uint _epochLength, uint _nextEpochBlock ) onlyPolicy external {
+        __Distributor_init_unchain(_treasury, _SYNASSETS, _epochLength, _nextEpochBlock);
+    }
+
+    function __Distributor_init_unchain( address _treasury, address _SYNASSETS, uint _epochLength, uint _nextEpochBlock ) internal {
         require( _treasury != address(0) );
         treasury = _treasury;
         require( _SYNASSETS != address(0) );

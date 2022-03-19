@@ -1,6 +1,112 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
+/**
+ * @title Initializable
+ *
+ * @dev Helper contract to support initializer functions. To use it, replace
+ * the constructor with a function that has the `initializer` modifier.
+ * WARNING: Unlike constructors, initializer functions must be manually
+ * invoked. This applies both to deploying an Initializable contract, as well
+ * as extending an Initializable contract via inheritance.
+ * WARNING: When used with inheritance, manual care must be taken to not invoke
+ * a parent initializer twice, or ensure that all initializers are idempotent,
+ * because this is not dealt with automatically as with constructors.
+ */
+contract Initializable {
+
+    /**
+     * @dev Indicates that the contract has been initialized.
+   */
+    bool private initialized;
+
+    /**
+     * @dev Indicates that the contract is in the process of being initialized.
+   */
+    bool private initializing;
+
+    /**
+     * @dev Modifier to use in the initializer function of a contract.
+   */
+    modifier initializer() {
+        require(initializing || isConstructor() || !initialized, "Contract instance has already been initialized");
+
+        bool isTopLevelCall = !initializing;
+        if (isTopLevelCall) {
+            initializing = true;
+            initialized = true;
+        }
+
+        _;
+
+        if (isTopLevelCall) {
+            initializing = false;
+        }
+    }
+
+    /// @dev Returns true if and only if the function is running in the constructor
+    function isConstructor() private view returns (bool) {
+        // extcodesize checks the size of the code stored in an address, and
+        // address returns the current address. Since the code is still not
+        // deployed when running a constructor, any checks on its code size will
+        // yield zero, making it an effective way to detect if a contract is
+        // under construction or not.
+        address self = address(this);
+        uint256 cs;
+        assembly { cs := extcodesize(self) }
+        return cs == 0;
+    }
+}
+
+interface IOwnable {
+    function owner() external view returns (address);
+
+    function renounceOwnership() external;
+
+    function transferOwnership( address newOwner_ ) external;
+}
+
+contract Ownable is IOwnable, Initializable {
+
+    address internal _owner;
+    address internal _pendingOwner;
+
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    event OwnershipTransferring(address indexed owner, address indexed pendingOwner);
+
+    function __Ownable_init_unchain() internal initializer {
+        require(_owner == address(0));
+        _owner = msg.sender;
+        emit OwnershipTransferred( address(0), _owner );
+    }
+
+    function owner() public view override returns (address) {
+        return _owner;
+    }
+
+    modifier onlyOwner() {
+        require( _owner == msg.sender, "Ownable: caller is not the owner" );
+        _;
+    }
+
+    function renounceOwnership() public virtual override onlyOwner() {
+        emit OwnershipTransferred( _owner, address(0) );
+        _owner = address(0);
+    }
+
+    function transferOwnership( address newOwner_ ) public virtual override onlyOwner() {
+        require( newOwner_ != address(0), "Ownable: new owner is the zero address");
+        emit OwnershipTransferring( _owner, newOwner_ );
+        _pendingOwner = newOwner_;
+    }
+
+    function acceptOwnership() external {
+        require(_pendingOwner == msg.sender, "Permission denied");
+        emit OwnershipTransferred( _owner, msg.sender );
+        _owner = msg.sender;
+    }
+}
+
 library LowGasSafeMath {
     /// @notice Returns x + y, reverts if sum overflows uint256
     /// @param x The augend
@@ -173,7 +279,7 @@ interface IDistributor {
 }
 
 // 7.97%
-contract ConsensusPool {
+contract ConsensusPool is Ownable {
 
     using LowGasSafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -234,7 +340,7 @@ contract ConsensusPool {
     event Unstaked(address indexed unstaker, address indexed inviter, uint256 amount);
     event RewardPaid(address indexed user, uint256 reward);
 
-    function initialize (
+    function __ConsensusPool_initialize (
         address _SYNASSETS,
         address _sSYNASSETS,
         uint256 _epochLength,
@@ -242,8 +348,33 @@ contract ConsensusPool {
         uint256 _firstEpochBlock,
         address _stakingContract,
         address _distributor
-    ) external {
-        require( SYNASSETS == address(0), 'AI' );
+    ) external initializer {
+        __ConsensusPool_init_unchain(_SYNASSETS, _sSYNASSETS, _epochLength, _firstEpochNumber, _firstEpochBlock, _stakingContract, _distributor);
+        __Ownable_init_unchain();
+    }
+
+    function setParameter(
+        address _SYNASSETS,
+        address _sSYNASSETS,
+        uint256 _epochLength,
+        uint256 _firstEpochNumber,
+        uint256 _firstEpochBlock,
+        address _stakingContract,
+        address _distributor
+    ) external onlyOwner {
+        __ConsensusPool_init_unchain(_SYNASSETS, _sSYNASSETS, _epochLength, _firstEpochNumber, _firstEpochBlock, _stakingContract, _distributor);
+    }
+
+    function __ConsensusPool_init_unchain(
+        address _SYNASSETS,
+        address _sSYNASSETS,
+        uint256 _epochLength,
+        uint256 _firstEpochNumber,
+        uint256 _firstEpochBlock,
+        address _stakingContract,
+        address _distributor
+    ) internal {
+//      require( SYNASSETS == address(0), 'AI' );
 
         require( _SYNASSETS != address(0) );
         SYNASSETS = _SYNASSETS;
@@ -256,7 +387,7 @@ contract ConsensusPool {
             number: _firstEpochNumber,
             endBlock: _firstEpochBlock,
             distribute: 0
-            });
+        });
 
         stakingContract = _stakingContract;
         distributor = _distributor;
