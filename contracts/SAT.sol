@@ -498,9 +498,7 @@ struct LOCK_INFO {
 }
 
 contract SATERC20Token is ERC20, VaultOwned, Pausable {
-
     using LowGasSafeMath for uint256;
-
     uint256 public constant CAP = 10**8 * 1 ether;
     uint256 public constant RATIO_FEE = 0.1 ether;
 
@@ -516,7 +514,6 @@ contract SATERC20Token is ERC20, VaultOwned, Pausable {
     function internal_mint(address account_, uint256 amount_) internal{
         require(totalSupply().add(amount_) <= CAP, 'CE');
         _mint(account_, amount_);
-
         if (lockedAddress != address(0)) {
             uint256 fee_ = amount_.mul(RATIO_FEE).div(1 ether);
             require(totalSupply().add(fee_) <= CAP, 'CE');
@@ -532,8 +529,8 @@ contract SATERC20Token is ERC20, VaultOwned, Pausable {
 
 
     function _freeze(address account_,uint256 amount_,uint256 release_time)internal {
-        require(release_time < block.timestamp +365*24*3600, 'release time is too long');
-        require(release_time > block.timestamp , 'release time is before now');
+//        require(release_time < block.timestamp +365*24*3600, 'release time is too long');
+//        require(release_time > block.timestamp , 'release time is before now');
         _sub_balances(account_,amount_);
         lock[account_].lock_array.push(LOCK_OBJ(release_time,amount_));
     }
