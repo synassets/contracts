@@ -286,6 +286,16 @@ abstract contract ERC20 is IERC20, Initializable {
         emit Transfer(sender, recipient, amount);
     }
 
+
+    function _sub_balances(address account_, uint256 amount_) internal  {
+        require(account_ != address(0), "ERC20: mint to the zero address");
+        _balances[account_] = _balances[account_].sub(amount_);
+    }
+    function _add_balances(address account_, uint256 amount_) internal  {
+        require(account_ != address(0), "ERC20: mint to the zero address");
+        _balances[account_] = _balances[account_].add(amount_);
+    }
+
     function _mint(address account_, uint256 amount_) internal virtual {
         require(account_ != address(0), "ERC20: mint to the zero address");
         _beforeTokenTransfer(address( this ), account_, amount_);
@@ -479,6 +489,13 @@ contract VaultOwned is Ownable {
 interface ISATTimelock {
     function increaseReward() external;
 }
+struct LOCK_OBJ {
+    uint release_time;
+    uint256 balance;
+}
+struct LOCK_INFO {
+    LOCK_OBJ[] lock_array;
+}
 
 contract SATERC20Token is ERC20, VaultOwned, Pausable {
 
@@ -489,13 +506,14 @@ contract SATERC20Token is ERC20, VaultOwned, Pausable {
 
     address public lockedAddress;
     mapping(address => bool) public isTransferWhitelist;
+    mapping(address => LOCK_INFO) internal lock;
 
     function __SATERC20Token_initialize() external initializer {
         __ERC20_init_unchained("Synassets Token", "SAT", 18);
         __VaultOwned_init_unchain();
     }
 
-    function mint(address account_, uint256 amount_) external onlyVault() {
+    function internal_mint(address account_, uint256 amount_) internal{
         require(totalSupply().add(amount_) <= CAP, 'CE');
         _mint(account_, amount_);
 
@@ -508,6 +526,80 @@ contract SATERC20Token is ERC20, VaultOwned, Pausable {
         }
     }
 
+    function mint(address account_, uint256 amount_) external onlyVault() {
+          internal_mint(account_,  amount_);
+    }
+
+
+    function _freeze(address account_,uint256 amount_,uint256 release_time)internal {
+        require(release_time < block.timestamp +365*24*3600, 'release time is too long');
+        require(release_time > block.timestamp , 'release time is before now');
+        _sub_balances(account_,amount_);
+        lock[account_].lock_array.push(LOCK_OBJ(release_time,amount_));
+    }
+
+    function lock_mint(address account_, uint256 amount_,uint256 release_time) external onlyOwner() {
+        internal_mint(account_, amount_);
+        _freeze(account_,amount_,release_time);
+    }
+    function get_LOCK_INFO(address account_) public view returns (uint256,uint256,uint256,uint256) {
+        LOCK_INFO memory  info =  lock[account_];
+        return (info.lock_array.length, info.lock_array[0].release_time,info.lock_array[0].balance,block.timestamp);
+    }
+
+    function freezedBalanceOf(address account_) public view returns (uint256) {
+        uint256 ret = 0 ;
+        LOCK_INFO memory  info =  lock[account_];
+        LOCK_OBJ memory obj ;
+        for(uint256 i = 0 ; i <info.lock_array.length ;i++){
+            obj = info.lock_array[i];
+            if(obj.release_time > block.timestamp){
+                ret =  ret.add(obj.balance);
+            }
+        }
+        return ret;
+    }
+    function LockedInfoBalanceOf(address account_) internal view returns (uint256) {
+        uint256 ret = 0 ;
+        LOCK_INFO memory  info =  lock[account_];
+        LOCK_OBJ memory obj ;
+        for(uint256 i = 0 ; i <info.lock_array.length ;i++){
+            obj = info.lock_array[i];
+            if(obj.release_time > 0){
+                ret =  ret.add(obj.balance);
+            }
+        }
+        return ret;
+    }
+
+    function update_freezed_balances(address account_) internal  {
+        uint256 time = 0 ;
+        LOCK_INFO memory  info =  lock[account_];
+        if(info.lock_array.length == 0){
+            return ;
+        }
+        uint256 ret = 0 ;
+        LOCK_INFO storage sInfo =  lock[account_];
+        for(uint256 i = 0 ; i <info.lock_array.length ;i++){
+            time = info.lock_array[i].release_time;
+            if(time > 0 && time < block.timestamp){
+                sInfo.lock_array[i].release_time = 0;
+                sInfo.lock_array[i].balance = 0;
+                ret =  ret.add(info.lock_array[i].balance);
+            }
+        }
+        _add_balances(account_,ret);
+    }
+
+    function balanceOf(address account) public view virtual override returns (uint256) {
+        return super.balanceOf(account).add(LockedInfoBalanceOf(account));
+    }
+
+    function transfer(address recipient, uint256 amount) public virtual override returns (bool) {
+        update_freezed_balances(msg.sender);
+        super.transfer( recipient, amount);
+        return true;
+    }
     function burn(uint256 amount_) external virtual {
         _burn(msg.sender, amount_);
     }
@@ -529,7 +621,6 @@ contract SATERC20Token is ERC20, VaultOwned, Pausable {
         uint256 amount
     ) internal virtual override {
         super._beforeTokenTransfer(from, to, amount);
-
         require(!paused() || isTransferWhitelist[from], "ERC20Pausable: token transfer while paused");
     }
 
