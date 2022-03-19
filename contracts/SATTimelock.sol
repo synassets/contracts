@@ -620,7 +620,7 @@ contract SATTimelock is Ownable {
         IERC20(token).safeTransfer(claimAddress, unlocked_);
     }
 
-    function increaseReward() external {
+    function increaseReward() public {
         uint256 balance_ = IERC20(token).balanceOf(address(this));
         uint256 amount_ = balance_.sub(reserveToken);
 
@@ -646,8 +646,8 @@ contract SATTimelock is Ownable {
         _claimAddressPending = claimAddress_;
     }
 
-    function burn(uint256 amount_) external onlyOwner {
-        increaseReward();
+    function burn(uint256 amount_) public onlyOwner {
+       increaseReward();
 
         uint256 balance_ = IERC20(token).balanceOf(address(this));
         uint256 burnAmount_ = amount_ > balance_ ? balance_ : amount_;
