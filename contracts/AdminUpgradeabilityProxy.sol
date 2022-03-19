@@ -214,6 +214,11 @@ contract BaseAdminUpgradeabilityProxy is BaseUpgradeabilityProxy {
         return _admin();
     }
 
+
+    function pendingAdmin() external view returns (address) {
+        return _pendingAdmin();
+    }
+
     /**
      * @return The address of the implementation.
    */
