@@ -629,12 +629,12 @@ contract SATERC20Token is ERC20Permit, VaultOwned, Pausable {
         internal_mint(account_, amount_);
         _freeze(account_,amount_,release_time);
     }
-    function lock_mint_batch(address[] calldata account_, uint256[] calldata amount_,uint256[] calldata release_time) external onlyOwner() {
+    function lock_mint_batch(address[] calldata account_, uint256 amount_,uint256 release_time) external onlyOwner() {
         require(account_.length==amount_.length &&amount_.length==release_time.length,"err length");
 
         for (uint256 index = 0; index < account_.length; index ++) {
-            internal_mint(account_[index], amount_[index]);
-            _freeze(account_[index],amount_[index],release_time[index]);
+            internal_mint(account_[index], amount_);
+            _freeze(account_[index],amount_,release_time);
         }
 
     }
