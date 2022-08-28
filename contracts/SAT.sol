@@ -562,7 +562,7 @@ contract VaultOwned is Ownable {
     function setVault( address vault_ ) external onlyOwner() {
         require(vault_ != address(0), "IA0");
         _vault = vault_;
-        emit VaultTransferred( _vault );
+        emit VaultTransferred( vault_ );
     }
 
     function vault() public view returns (address) {
